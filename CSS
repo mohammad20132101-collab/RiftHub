@@ -1,0 +1,50 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f1a;
+  color: white;
+}
+
+header {
+  padding: 20px;
+  text-align: center;
+  background: #1a1a2e;
+}
+
+#search {
+  margin-top: 10px;
+  padding: 10px;
+  width: 60%;
+  border-radius: 10px;
+  border: none;
+}
+
+#gameGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  padding: 20px;
+}
+
+.game-card {
+  background: #1f1f3a;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.game-card:hover {
+  transform: scale(1.05);
+  background: #2a2a50;
+}
+
+button {
+  padding: 8px 12px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #ff2e63;
+  color: white;
+  cursor: pointer;
+}

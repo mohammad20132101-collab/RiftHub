@@ -115,6 +115,25 @@ function draw(){
   ctx.fillStyle="#050814";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
+  // GRID (new part)
+  ctx.strokeStyle = "rgba(255,255,255,0.06)";
+  ctx.lineWidth = 1;
+
+  for(let x = 0; x <= COLS; x++){
+    ctx.beginPath();
+    ctx.moveTo(x * SIZE, 0);
+    ctx.lineTo(x * SIZE, canvas.height);
+    ctx.stroke();
+  }
+
+  for(let y = 0; y <= ROWS; y++){
+    ctx.beginPath();
+    ctx.moveTo(0, y * SIZE);
+    ctx.lineTo(canvas.width, y * SIZE);
+    ctx.stroke();
+  }
+
+  // EXISTING BLOCKS (unchanged)
   for(let y=0;y<ROWS;y++){
     for(let x=0;x<COLS;x++){
       if(board[y][x]) drawCell(x,y,board[y][x]);

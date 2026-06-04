@@ -1,12 +1,282 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Pong Game</title>
-</head>
-<body>
-  <h1>Pong Game</h1>
-  <p>The game will go here.</p>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rift Hub - Pong</title>
 
-  <a href="index.html">← Back</a>
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f0f1a;
+    color: white;
+    text-align: center;
+}
+
+header {
+    background: #1a1a2e;
+    padding: 20px;
+}
+
+h1 {
+    margin: 0;
+}
+
+.controls {
+    margin: 15px;
+}
+
+button {
+    background: #4c6fff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+canvas {
+    background: #141428;
+    border: 3px solid #4c6fff;
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+#score {
+    font-size: 28px;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🏓 Rift Hub Pong</h1>
+</header>
+
+<div class="controls">
+    <button onclick="setMode(1)">1 Player</button>
+    <button onclick="setMode(2)">2 Players</button>
+</div>
+
+<p id="modeText">
+1 Player: Arrow Keys | AI Opponent
+</p>
+
+<div id="score">0 : 0</div>
+
+<canvas id="game" width="900" height="500"></canvas>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let mode = 1;
+
+const paddleWidth = 15;
+const paddleHeight = 100;
+
+const left = {
+    x: 20,
+    y: 200,
+    score: 0
+};
+
+const right = {
+    x: canvas.width - 35,
+    y: 200,
+    score: 0
+};
+
+const ball = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 10,
+    vx: 6,
+    vy: 4
+};
+
+const keys = {};
+
+document.addEventListener("keydown", e => {
+    keys[e.key] = true;
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key] = false;
+});
+
+function setMode(m) {
+    mode = m;
+
+    document.getElementById("modeText").textContent =
+        mode === 1
+        ? "1 Player: Arrow Keys | AI Opponent"
+        : "2 Players: W/S vs Arrow Keys";
+}
+
+function resetBall() {
+
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+
+    ball.vx = (Math.random() > 0.5 ? 6 : -6);
+    ball.vy = (Math.random() * 6 - 3);
+}
+
+function update() {
+
+    // Right Paddle (Arrow Keys)
+
+    if (keys["ArrowUp"])
+        right.y -= 7;
+
+    if (keys["ArrowDown"])
+        right.y += 7;
+
+    // Left Paddle
+
+    if (mode === 2) {
+
+        if (keys["w"] || keys["W"])
+            left.y -= 7;
+
+        if (keys["s"] || keys["S"])
+            left.y += 7;
+
+    } else {
+
+        // AI
+
+        let center = left.y + paddleHeight / 2;
+
+        if (center < ball.y - 20)
+            left.y += 5;
+
+        else if (center > ball.y + 20)
+            left.y -= 5;
+    }
+
+    left.y = Math.max(0,
+        Math.min(canvas.height - paddleHeight, left.y));
+
+    right.y = Math.max(0,
+        Math.min(canvas.height - paddleHeight, right.y));
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    if (ball.y <= ball.radius ||
+        ball.y >= canvas.height - ball.radius) {
+        ball.vy *= -1;
+    }
+
+    // Left Paddle Collision
+
+    if (
+        ball.x - ball.radius <= left.x + paddleWidth &&
+        ball.y >= left.y &&
+        ball.y <= left.y + paddleHeight
+    ) {
+        ball.vx = Math.abs(ball.vx);
+    }
+
+    // Right Paddle Collision
+
+    if (
+        ball.x + ball.radius >= right.x &&
+        ball.y >= right.y &&
+        ball.y <= right.y + paddleHeight
+    ) {
+        ball.vx = -Math.abs(ball.vx);
+    }
+
+    // Scoring
+
+    if (ball.x < 0) {
+        right.score++;
+        resetBall();
+    }
+
+    if (ball.x > canvas.width) {
+        left.score++;
+        resetBall();
+    }
+
+    document.getElementById("score").textContent =
+        left.score + " : " + right.score;
+}
+
+function draw() {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Center line
+
+    ctx.setLineDash([10,10]);
+
+    ctx.strokeStyle = "#4c6fff";
+
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2,0);
+    ctx.lineTo(canvas.width/2,canvas.height);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // Paddles
+
+    ctx.fillStyle = "#4c6fff";
+
+    ctx.fillRect(
+        left.x,
+        left.y,
+        paddleWidth,
+        paddleHeight
+    );
+
+    ctx.fillRect(
+        right.x,
+        right.y,
+        paddleWidth,
+        paddleHeight
+    );
+
+    // Ball
+
+    ctx.beginPath();
+
+    ctx.arc(
+        ball.x,
+        ball.y,
+        ball.radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "white";
+    ctx.fill();
+}
+
+function gameLoop() {
+
+    update();
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+</script>
+
 </body>
 </html>

@@ -1,16 +1,22 @@
-// GET TARGET
 function getTarget(){
-let best=null;
+let best = null;
 
 for(let e of enemies){
-if(e.row===turretRow){
-if(!best || e.x<best.x) best=e;
+if(e.row === turretRow){
+
+// only allow enemies within range
+if(e.x <= 60 + range * 40){
+
+if(!best || e.x < best.x){
+best = e;
+}
+
+}
 }
 }
 
 return best;
 }
-
 // BEAM SYSTEM (INFERNO STYLE)
 function fireBeam(delta){
 
@@ -26,6 +32,7 @@ currentTarget=null;
 beamCharge=1;
 return;
 }
+let range=5;
 
 if(currentTarget===target){
 beamCharge+=0.3*ramp;
@@ -164,6 +171,13 @@ function upgradeRamp(){
 if(coins >= 25){
 coins -= 25;
 ramp += 0.5;
+updateUI();
+}
+}
+function upgradeRange(){
+if(coins >= 20){
+coins -= 20;
+range += 1;
 updateUI();
 }
 }

@@ -1,1 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rift Defence</title>
 
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f1a;
+  color: white;
+  text-align: center;
+}
+
+header {
+  background: #1a1a2e;
+  padding: 10px;
+}
+
+#backBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #FF2E88;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+}
+
+canvas {
+  background: #111122;
+  display: block;
+  margin: 10px auto;
+  border: 2px solid #6C5CE7;
+}
+
+button {
+  background: #6C5CE7;
+  border: none;
+  padding: 8px 12px;
+  color: white;
+  margin: 5px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #00D2FF;
+}
+</style>
+</head>
+
+<body>
+
+<button id="backBtn" onclick="goBack()">⬅ Rift Hub</button>
+
+<header>
+<h1>🌀 Rift Defence</h1>
+<p>Endless waves • Grid combat • Upgrades</p>
+</header>
+
+<div>
+  <button onclick="startGame()">Start</button>
+</div>
+
+<p>
+💰 Coins: <span id="coins">0</span> |
+🌊 Wave: <span id="wave">1</span>
+</p>
+
+<canvas id="game" width="800" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let coins = 0;
+let wave = 1;
+
+let turretY = 200;
+let damage = 1;
+
+let enemies = [];
+let bullets = [];
+let running = false;
+
+// 🟦 SMALL GRID (20px)
+function drawGrid() {
+  ctx.strokeStyle = "#1f1f3a";
+
+  for (let x = 0; x < 800; x += 20) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 400);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < 400; y += 20) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(800, y);
+    ctx.stroke();
+  }
+}
+
+// 🔫 BIGGER TURRET + FASTER VISUAL CONTROL
+function drawTurret() {
+  ctx.fillStyle = "#6C5CE7";
+  ctx.fillRect(40, turretY - 20, 30, 40);
+}
+
+// 🧱 ENEMIES ARE NOW SQUARES (grid aligned)
+function spawnEnemy() {
+  let size = 20;
+
+  enemies.push({
+    x: 800,
+    y: Math.floor(Math.random() * 20) * size,
+    hp: 3 + wave,
+    size: size
+  });
+}
+
+// 🔫 SHOOT
+function shoot() {
+  bullets.push({
+    x: 75,
+    y: turretY
+  });
+}
+
+// 🎮 GAME LOOP
+function update() {
+  if (!running) return;
+
+  ctx.clearRect(0, 0, 800, 400);
+  drawGrid();
+  drawTurret();
+
+  // ENEMIES (SQUARES)
+  ctx.fillStyle = "#FF2E88";
+  enemies.forEach((e, i) => {
+    e.x -= 2 + wave * 0.2;
+
+    ctx.fillRect(e.x, e.y, e.size, e.size);
+
+    if (e.x < 80) enemies.splice(i, 1);
+  });
+
+  // BULLETS
+  ctx.fillStyle = "#00D2FF";
+
+  bullets.forEach((b, bi) => {
+    b.x += 6;
+
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    enemies.forEach((e, ei) => {
+
+      // ✅ PROPER SQUARE COLLISION
+      if (
+        b.x > e.x &&
+        b.x < e.x + e.size &&
+        b.y > e.y &&
+        b.y < e.y + e.size
+      ) {
+        e.hp -= damage;
+        bullets.splice(bi, 1);
+
+        if (e.hp <= 0) {
+          enemies.splice(ei, 1);
+          coins += 2;
+        }
+      }
+    });
+  });
+
+  document.getElementById("coins").textContent = coins;
+  document.getElementById("wave").textContent = wave;
+
+  requestAnimationFrame(update);
+}
+
+// ⬆️⬇️ FASTER TURRET MOVEMENT
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowUp") turretY -= 25;
+  if (e.key === "ArrowDown") turretY += 25;
+});
+
+// LOOPS
+setInterval(() => {
+  if (running) shoot();
+}, 400);
+
+setInterval(() => {
+  if (running) spawnEnemy();
+}, 900);
+
+setInterval(() => {
+  if (running) wave++;
+}, 8000);
+
+// START
+function startGame() {
+  if (!running) {
+    running = true;
+    update();
+  }
+}
+
+// BACK
+function goBack() {
+  window.location.href = "rifthub.html";
+}
+</script>
+
+</body>
+</html>

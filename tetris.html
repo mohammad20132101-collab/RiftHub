@@ -215,11 +215,35 @@ function drawNext(){
   nctx.fillStyle="#050814";
   nctx.fillRect(0,0,120,120);
 
+  const blockSize = 25;
+
+  const pieceWidth = nextPiece[0].length * blockSize;
+  const pieceHeight = nextPiece.length * blockSize;
+
+  const offsetX = (120 - pieceWidth) / 2;
+  const offsetY = (120 - pieceHeight) / 2;
+
   nextPiece.forEach((r,y)=>{
     r.forEach((v,x)=>{
       if(v){
+
         nctx.fillStyle = COLORS[v];
-        nctx.fillRect(x*25,y*25,25,25);
+        nctx.fillRect(
+          offsetX + x*blockSize,
+          offsetY + y*blockSize,
+          blockSize,
+          blockSize
+        );
+
+        // Same border style as main board
+        nctx.strokeStyle = "#000";
+        nctx.strokeRect(
+          offsetX + x*blockSize,
+          offsetY + y*blockSize,
+          blockSize,
+          blockSize
+        );
+
       }
     });
   });

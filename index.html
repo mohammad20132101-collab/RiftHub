@@ -256,9 +256,14 @@ function openGame(page, name, img) {
 function saveHistory(name, page, img) {
   let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
 
+  // remove duplicates
   history = history.filter(g => g.name !== name);
+
+  // add newest first
   history.unshift({ name, page, img });
-  history = history.slice(0, 6);
+
+  // ✅ LIMIT TO 3 ONLY (THIS IS THE CHANGE)
+  history = history.slice(0, 3);
 
   localStorage.setItem("riftHistory", JSON.stringify(history));
   renderHistory();

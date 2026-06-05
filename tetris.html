@@ -133,14 +133,21 @@ function randomPiece(){
 }
 
 function resetPlayer(){
+
   player.shape = nextPiece;
   player.x = 3;
   player.y = 0;
 
+  // Game Over check
+  if(collide()){
+    alert("Game Over!\nScore: " + score);
+    startGame();
+    return;
+  }
+
   nextPiece = randomPiece();
   drawNext();
 }
-
 function startGame(){
 
   board = Array.from({length:ROWS},()=>Array(COLS).fill(0));

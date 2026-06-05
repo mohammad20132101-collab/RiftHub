@@ -301,6 +301,54 @@ document.getElementById("search").addEventListener("input", function () {
 </script>
 
 </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } 
+  from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
+  const firebaseConfig = {
+    apiKey: "AIzaSyD2XQWUKM4SQO8azXkm2XwG_e9ZQWpYJi0",
+    authDomain: "rifthub-4275a.firebaseapp.com",
+    projectId: "rifthub-4275a",
+    storageBucket: "rifthub-4275a.firebasestorage.app",
+    messagingSenderId: "56609352786",
+    appId: "1:56609352786:web:55dc5d3b32412bf1e3838b",
+  };
+
+  // INIT
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // MAKE FUNCTIONS GLOBAL so your HTML can use them
+  window.login = function () {
+    const email = document.getElementById("usernameInput").value;
+    const password = "123456";
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then(user => {
+        loadUser(user.user.email);
+      })
+      .catch(() => {
+        createUserWithEmailAndPassword(auth, email, password)
+          .then(user => {
+            loadUser(user.user.email);
+          })
+          .catch(err => alert(err.message));
+      });
+  };
+
+  function loadUser(name) {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("site").style.display = "block";
+    document.getElementById("username").textContent = name;
+  }
+
+  // AUTO LOGIN
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      loadUser(user.email);
+    }
+  });
+</script>
 </body>
 </html>

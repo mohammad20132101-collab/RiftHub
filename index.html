@@ -197,12 +197,14 @@ a {
   </div>
 </footer>
 
-<script>
-
-/* ===== FIREBASE LOGIN (REAL ONLINE) ===== */
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged }
-from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2XQWUKM4SQO8azXkm2XWUKM4SQO8azXkm2XWUKM4SQO",
@@ -216,31 +218,38 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+/* LOGIN */
 window.login = function () {
-  const email = document.getElementById("usernameInput").value;
-  const password = "123456";
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
   signInWithEmailAndPassword(auth, email, password)
     .then(u => loadUser(u.user.email))
-    .catch(() => {
-      createUserWithEmailAndPassword(auth, email, password)
-        .then(u => loadUser(u.user.email))
-        .catch(err => alert(err.message));
-    });
+    .catch(err => alert(err.message));
 };
 
-function loadUser(name) {
+/* SIGN UP */
+window.signup = function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  createUserWithEmailAndPassword(auth, email, password)
+    .then(u => loadUser(u.user.email))
+    .catch(err => alert(err.message));
+};
+
+function loadUser(email) {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("site").style.display = "block";
-  document.getElementById("username").textContent = name;
+  document.getElementById("username").textContent = email;
 }
 
 onAuthStateChanged(auth, (user) => {
   if (user) loadUser(user.email);
 });
 
-/* ===== GAME OPEN + HISTORY ===== */
-function openGame(page, name, img) {
+/* GAME SYSTEM */
+window.openGame = function (page, name, img) {
   let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
 
   history = history.filter(g => g.name !== name);
@@ -251,7 +260,7 @@ function openGame(page, name, img) {
   renderHistory();
 
   window.location.href = page;
-}
+};
 
 function renderHistory() {
   const grid = document.getElementById("historyGrid");
@@ -270,16 +279,17 @@ function renderHistory() {
 
 renderHistory();
 
-/* ===== SEARCH ===== */
+/* SEARCH */
 document.getElementById("search").addEventListener("input", function () {
   const val = this.value.toLowerCase();
+
   document.querySelectorAll(".game-card").forEach(card => {
     const name = card.getAttribute("data-name");
     if (!name) return;
+
     card.style.display = name.toLowerCase().includes(val) ? "block" : "none";
   });
 });
-
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";

@@ -12,6 +12,7 @@ font-family:Arial,sans-serif;
 background:#0f0f1a;
 color:white;
 text-align:center;
+overflow:hidden;
 }
 
 header{
@@ -69,7 +70,6 @@ width:300px;
 </header>
 
 <div id="topBar">
-<button onclick="startGame()">▶ Start</button>
 <button onclick="restartGame()">🔄 Restart</button>
 <button onclick="toggleShop()">🛒 Upgrades</button>
 </div>
@@ -98,39 +98,53 @@ width:300px;
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let running=false;
-let lastTime=0;
+// ================= GAME STATE =================
+let running = false;
+let lastTime = 0;
 
-let coins=0;
-let wave=1;
-let base=0;
+let coins = 0;
+let wave = 1;
+let base = 0;
 
-let damage=1;
-let fireRate=700;
-let ramp=1;
-let range=5;
+let damage = 1;
+let fireRate = 700;
+let ramp = 1;
+let range = 5;
 
-let turretRow=10;
+let turretRow = 10;
 
-let enemies=[];
-let particles=[];
+let enemies = [];
+let particles = [];
 
-let beamTimer=0;
-let spawnTimer=0;
-let waveTimer=0;
+let beamTimer = 0;
+let spawnTimer = 0;
+let waveTimer = 0;
 
-let currentTarget=null;
-let beamCharge=1;
+let currentTarget = null;
+let beamCharge = 1;
 
-const GRID=20;
+const GRID = 20;
+
+// ================= AUTO START =================
+function startGame(){
+    if(running) return;
+    running = true;
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+// 🚀 AUTO-START (this is the key change)
+window.onload = () => {
+    startGame();
+};
 
 // ================= UI =================
 function updateUI(){
-document.getElementById("coins").textContent=coins;
-document.getElementById("wave").textContent=wave;
-document.getElementById("damage").textContent=damage;
-document.getElementById("range").textContent=range;
-document.getElementById("base").textContent=base;
+document.getElementById("coins").textContent = coins;
+document.getElementById("wave").textContent = wave;
+document.getElementById("damage").textContent = damage;
+document.getElementById("range").textContent = range;
+document.getElementById("base").textContent = base;
 }
 
 // ================= CONTROLS =================
@@ -141,14 +155,7 @@ if(e.key==="ArrowDown") turretRow++;
 turretRow=Math.max(0,Math.min(24,turretRow));
 });
 
-// ================= GAME CONTROL =================
-function startGame(){
-if(running) return;
-running=true;
-lastTime=performance.now();
-requestAnimationFrame(loop);
-}
-
+// ================= RESTART =================
 function restartGame(){
 coins=0;
 wave=1;
@@ -168,12 +175,12 @@ currentTarget=null;
 updateUI();
 }
 
+// ================= SHOP =================
 function toggleShop(){
 let s=document.getElementById("shop");
 s.style.display=s.style.display==="block"?"none":"block";
 }
 
-// ================= UPGRADES =================
 function upgradeDamage(){ if(coins>=10){coins-=10;damage++;updateUI();}}
 function upgradeFire(){ if(coins>=15&&fireRate>150){coins-=15;fireRate-=60;updateUI();}}
 function upgradeRamp(){ if(coins>=25){coins-=25;ramp+=0.5;updateUI();}}
@@ -188,7 +195,7 @@ hp:5
 });
 }
 
-// ================= DRAW =================
+// ================= GRID =================
 function drawGrid(){
 ctx.strokeStyle="#1f1f3a";
 for(let x=0;x<900;x+=GRID){
@@ -199,6 +206,7 @@ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(900,y);ctx.stroke();
 }
 }
 
+// ================= TURRET =================
 function drawTurret(){
 ctx.fillStyle="#6C5CE7";
 ctx.fillRect(30,turretRow*GRID,30,20);
@@ -210,17 +218,13 @@ let best=null;
 
 for(let e of enemies){
 if(e.row===turretRow){
-
 if(e.x<=60+range*40){
-
 if(!best||e.x<best.x){
 best=e;
 }
 }
-
 }
 }
-
 return best;
 }
 
@@ -251,7 +255,7 @@ currentTarget=target;
 let dmg=damage*beamCharge;
 target.hp-=dmg;
 
-// beam
+// draw beam
 ctx.strokeStyle=`rgba(0,210,255,${Math.min(beamCharge/6,1)})`;
 ctx.lineWidth=Math.min(2+beamCharge,10);
 
@@ -280,17 +284,14 @@ let e=enemies[i];
 e.x-=1+wave*0.08;
 e.y=e.row*GRID;
 
-// cube
 ctx.fillStyle="#FF2E88";
 ctx.fillRect(e.x,e.y,20,20);
 
-// HP bar
 ctx.fillStyle="#333";
 ctx.fillRect(e.x,e.y-6,20,4);
 ctx.fillStyle="#00FF88";
 ctx.fillRect(e.x,e.y-6,20*(e.hp/5),4);
 
-// base hit
 if(e.x<=0){
 base+=2;
 enemies.splice(i,1);
@@ -332,13 +333,24 @@ ctx.clearRect(0,0,900,500);
 drawGrid();
 drawTurret();
 
-spawnTimer+=delta;
-if(spawnTimer>900){
-spawnEnemy();
-spawnTimer=0;
+// ================= BALANCED SPAWNING =================
+spawnTimer += delta;
+
+let baseSpawnRate = 1300;
+let dynamicRate = baseSpawnRate - (wave * 60);
+dynamicRate = Math.max(700, dynamicRate);
+
+if (spawnTimer > dynamicRate) {
+    spawnEnemy();
+
+    if (wave > 6 && Math.random() < 0.25) {
+        spawnEnemy();
+    }
+
+    spawnTimer = 0;
 }
 
-waveTimer+=delta;
+waveTimer += delta;
 if(waveTimer>10000){
 wave++;
 coins+=10;

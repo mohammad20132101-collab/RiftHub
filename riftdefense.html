@@ -8,7 +8,7 @@
 <style>
 body{
 margin:0;
-font-family:Arial,sans-serif;
+font-family:Arial;
 background:#0f0f1a;
 color:white;
 text-align:center;
@@ -25,8 +25,8 @@ border-bottom:2px solid #6C5CE7;
 display:flex;
 justify-content:center;
 gap:10px;
-flex-wrap:wrap;
 padding:10px;
+flex-wrap:wrap;
 }
 
 button{
@@ -38,8 +38,6 @@ cursor:pointer;
 color:white;
 font-weight:bold;
 }
-
-button:hover{ background:#00D2FF; }
 
 canvas{
 background:#111122;
@@ -98,21 +96,14 @@ width:300px;
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ================= GAME STATE =================
+// ================= STATE =================
 let running = false;
 let lastTime = 0;
 
-let coins = 0;
-let wave = 1;
-let base = 0;
+let coins, wave, base;
+let damage, fireRate, ramp, range;
 
-let damage = 1;
-let fireRate = 700;
-let ramp = 1;
-let range = 5;
-
-let turretRow = 10;
-
+let turretRow;
 let enemies = [];
 let particles = [];
 
@@ -125,17 +116,43 @@ let beamCharge = 1;
 
 const GRID = 20;
 
-// ================= AUTO START =================
-function startGame(){
-    if(running) return;
-    running = true;
-    lastTime = performance.now();
-    requestAnimationFrame(loop);
+// ================= RESET =================
+function resetState(){
+coins = 0;
+wave = 1;
+base = 0;
+
+damage = 1;
+fireRate = 700;
+ramp = 1;
+range = 5;
+
+turretRow = 10;
+
+enemies = [];
+particles = [];
+
+beamTimer = 0;
+spawnTimer = 0;
+waveTimer = 0;
+
+currentTarget = null;
+beamCharge = 1;
+
+updateUI();
 }
 
-// 🚀 AUTO-START (this is the key change)
+// ================= AUTO START =================
+function startGame(){
+if(running) return;
+running = true;
+lastTime = performance.now();
+requestAnimationFrame(loop);
+}
+
 window.onload = () => {
-    startGame();
+resetState();
+startGame();
 };
 
 // ================= UI =================
@@ -157,22 +174,14 @@ turretRow=Math.max(0,Math.min(24,turretRow));
 
 // ================= RESTART =================
 function restartGame(){
-coins=0;
-wave=1;
-base=0;
-damage=1;
-fireRate=700;
-ramp=1;
-range=5;
-turretRow=10;
-enemies=[];
-particles=[];
-beamTimer=0;
-spawnTimer=0;
-waveTimer=0;
-beamCharge=1;
-currentTarget=null;
-updateUI();
+running = false;
+resetState();
+
+setTimeout(()=>{
+running = true;
+lastTime = performance.now();
+requestAnimationFrame(loop);
+},50);
 }
 
 // ================= SHOP =================
@@ -186,7 +195,7 @@ function upgradeFire(){ if(coins>=15&&fireRate>150){coins-=15;fireRate-=60;updat
 function upgradeRamp(){ if(coins>=25){coins-=25;ramp+=0.5;updateUI();}}
 function upgradeRange(){ if(coins>=20){coins-=20;range++;updateUI();}}
 
-// ================= ENEMIES =================
+// ================= ENEMY =================
 function spawnEnemy(){
 enemies.push({
 x:900,
@@ -195,12 +204,42 @@ hp:5
 });
 }
 
+// ================= PARTICLES (SMALL + CLEAN) =================
+function spawnParticles(x,y){
+for(let i=0;i<6;i++){
+particles.push({
+x:x,
+y:y,
+vx:(Math.random()-0.5)*2,
+vy:(Math.random()-0.5)*2,
+life:20
+});
+}
+}
+
+function drawParticles(){
+for(let i=particles.length-1;i>=0;i--){
+let p=particles[i];
+
+p.x += p.vx;
+p.y += p.vy;
+p.life--;
+
+ctx.fillStyle = "rgba(0,210,255,0.9)";
+ctx.fillRect(p.x,p.y,2,2);
+
+if(p.life<=0) particles.splice(i,1);
+}
+}
+
 // ================= GRID =================
 function drawGrid(){
 ctx.strokeStyle="#1f1f3a";
+
 for(let x=0;x<900;x+=GRID){
 ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();
 }
+
 for(let y=0;y<500;y+=GRID){
 ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(900,y);ctx.stroke();
 }
@@ -255,7 +294,6 @@ currentTarget=target;
 let dmg=damage*beamCharge;
 target.hp-=dmg;
 
-// draw beam
 ctx.strokeStyle=`rgba(0,210,255,${Math.min(beamCharge/6,1)})`;
 ctx.lineWidth=Math.min(2+beamCharge,10);
 
@@ -264,11 +302,15 @@ ctx.moveTo(60,turretRow*GRID+10);
 ctx.lineTo(target.x+10,target.y+10);
 ctx.stroke();
 
-// kill
 if(target.hp<=0){
 coins+=2;
+
+// ✨ SMALL PARTICLE BURST
+spawnParticles(target.x+10,target.y+10);
+
 let i=enemies.indexOf(target);
 if(i>-1) enemies.splice(i,1);
+
 beamCharge=1;
 currentTarget=null;
 updateUI();
@@ -281,8 +323,8 @@ function drawEnemies(delta){
 for(let i=enemies.length-1;i>=0;i--){
 let e=enemies[i];
 
-e.x-=1+wave*0.08;
-e.y=e.row*GRID;
+e.x -= 1 + wave*0.08;
+e.y = e.row*GRID;
 
 ctx.fillStyle="#FF2E88";
 ctx.fillRect(e.x,e.y,20,20);
@@ -306,21 +348,6 @@ return;
 }
 }
 
-// ================= PARTICLES =================
-function drawParticles(){
-for(let i=particles.length-1;i>=0;i--){
-let p=particles[i];
-p.x+=p.vx;
-p.y+=p.vy;
-p.life--;
-
-ctx.fillStyle="#00D2FF";
-ctx.fillRect(p.x,p.y,2,2);
-
-if(p.life<=0) particles.splice(i,1);
-}
-}
-
 // ================= LOOP =================
 function loop(t){
 if(!running) return;
@@ -333,21 +360,16 @@ ctx.clearRect(0,0,900,500);
 drawGrid();
 drawTurret();
 
-// ================= BALANCED SPAWNING =================
+// spawn system
 spawnTimer += delta;
 
 let baseSpawnRate = 1300;
-let dynamicRate = baseSpawnRate - (wave * 60);
-dynamicRate = Math.max(700, dynamicRate);
+let dynamicRate = Math.max(700, baseSpawnRate - (wave * 60));
 
-if (spawnTimer > dynamicRate) {
-    spawnEnemy();
-
-    if (wave > 6 && Math.random() < 0.25) {
-        spawnEnemy();
-    }
-
-    spawnTimer = 0;
+if(spawnTimer > dynamicRate){
+spawnEnemy();
+if(wave > 6 && Math.random() < 0.25) spawnEnemy();
+spawnTimer = 0;
 }
 
 waveTimer += delta;

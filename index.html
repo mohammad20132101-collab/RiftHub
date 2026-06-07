@@ -112,7 +112,7 @@ button {
 
 <body>
 
-<!-- LEADERBOARD -->
+<!-- LEADERBOARD BUTTON -->
 <div id="lbBtn" onclick="toggleLB()">🏆</div>
 
 <div id="lbPanel">
@@ -163,10 +163,10 @@ button {
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } 
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged }
 from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
-import { getDatabase, ref, get, set } 
+import { getDatabase, ref, get, set }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -180,79 +180,92 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-/* AUTH */
+/* ===== LOGIN FIXED ===== */
 window.login = () => {
-  signInWithEmailAndPassword(auth, email.value, password.value)
+  const e = document.getElementById("email").value;
+  const p = document.getElementById("password").value;
+
+  signInWithEmailAndPassword(auth, e, p)
     .then(u => loadUser(u.user.email))
     .catch(err => alert(err.message));
 };
 
 window.signup = () => {
-  createUserWithEmailAndPassword(auth, email.value, password.value)
+  const e = document.getElementById("email").value;
+  const p = document.getElementById("password").value;
+
+  createUserWithEmailAndPassword(auth, e, p)
     .then(u => loadUser(u.user.email))
     .catch(err => alert(err.message));
 };
 
-function loadUser(e){
-  loginScreen.style.display="none";
-  site.style.display="block";
-  username.textContent=e;
+function loadUser(email){
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("site").style.display = "block";
+  document.getElementById("username").textContent = email;
   renderHistory();
 }
 
-onAuthStateChanged(auth,u=>{
-  if(u) loadUser(u.email);
+onAuthStateChanged(auth, u => {
+  if (u) loadUser(u.email);
 });
 
-/* HISTORY */
-window.openGame = (p,name)=>{
-  let h = JSON.parse(localStorage.getItem("riftHistory"))||[];
-  h = h.filter(g=>g.name!==name);
-  h.unshift({name,page:p});
-  h = h.slice(0,3);
-  localStorage.setItem("riftHistory",JSON.stringify(h));
+/* ===== HISTORY ===== */
+window.openGame = (p, name) => {
+  let h = JSON.parse(localStorage.getItem("riftHistory")) || [];
+
+  h = h.filter(g => g.name !== name);
+  h.unshift({ name, page: p });
+  h = h.slice(0, 3);
+
+  localStorage.setItem("riftHistory", JSON.stringify(h));
   renderHistory();
-  location.href=p;
+  location.href = p;
 };
 
-function renderHistory(){
-  let h = JSON.parse(localStorage.getItem("riftHistory"))||[];
-  historyGrid.innerHTML = h.map(g=>`
-    <div class="game-card">
-      <h3>${g.name}</h3>
-      <button onclick="openGame('${g.page}','${g.name}')">Play</button>
-    </div>
-  `).join("");
+function renderHistory() {
+  let h = JSON.parse(localStorage.getItem("riftHistory")) || [];
+
+  document.getElementById("historyGrid").innerHTML =
+    h.map(g => `
+      <div class="game-card">
+        <h3>${g.name}</h3>
+        <button onclick="openGame('${g.page}','${g.name}')">Play</button>
+      </div>
+    `).join("");
 }
 
-/* LEADERBOARD */
+/* ===== LEADERBOARD ===== */
 window.toggleLB = () => {
-  lbPanel.style.display = lbPanel.style.display==="block"?"none":"block";
+  const p = document.getElementById("lbPanel");
+  p.style.display = p.style.display === "block" ? "none" : "block";
 };
 
-window.saveScore = function(name,score){
-  set(ref(db,"scores/"+name), score);
+window.saveScore = function(name, score) {
+  set(ref(db, "scores/" + name), score);
 };
 
-window.loadLeaderboard = async function(){
-  const snap = await get(ref(db,"scores"));
+window.loadLeaderboard = async function() {
+  const snap = await get(ref(db, "scores"));
   const data = snap.val() || {};
 
-  const list = Object.entries(data)
-    .sort((a,b)=>b[1]-a[1])
-    .map(x=>`<div class="lb-entry">${x[0]}: ${x[1]}</div>`)
+  const sorted = Object.entries(data)
+    .sort((a, b) => b[1] - a[1])
+    .map(x => `<div class="lb-entry">${x[0]}: ${x[1]}</div>`)
     .join("");
 
-  lbList.innerHTML = list || "No scores yet";
+  document.getElementById("lbList").innerHTML =
+    sorted || "No scores yet";
 };
 
 window.loadLB = () => loadLeaderboard();
 
-/* SEARCH */
-search.addEventListener("input", e=>{
-  document.querySelectorAll(".game-card").forEach(c=>{
+/* ===== SEARCH ===== */
+document.getElementById("search").addEventListener("input", e => {
+  document.querySelectorAll(".game-card").forEach(c => {
     c.style.display = c.innerText.toLowerCase().includes(e.target.value.toLowerCase())
-      ? "block":"none";
+      ? "block"
+      : "none";
   });
 });
 </script>

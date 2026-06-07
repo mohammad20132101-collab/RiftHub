@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -74,8 +75,8 @@ button{
 </header>
 
 <button onclick="restart()">Restart</button>
-<button onclick="window.location.href='index.html'">Back</button>
 <button onclick="undo()">Undo</button>
+<button onclick="window.location.href='index.html'">Back</button>
 
 <div id="game"></div>
 
@@ -225,7 +226,7 @@ function checkWin(){
   }
 }
 
-// ================= MOVE POSSIBLE CHECK =================
+// ================= MOVE CHECK =================
 function canMove(){
 
   for(let r=0;r<4;r++){
@@ -258,17 +259,24 @@ function checkLose(){
   }
 }
 
-// ================= INPUT =================
-document.addEventListener("keydown",e=>{
+// ================= INPUT (FIXED) =================
+document.addEventListener("keydown", e => {
 
-  history.push(JSON.stringify(board)); // save state before move
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+    e.preventDefault();
+  }
 
-  if(e.key==="ArrowLeft") moveLeft();
-  if(e.key==="ArrowRight") moveRight();
-  if(e.key==="ArrowUp") moveUp();
-  if(e.key==="ArrowDown") moveDown();
+  let before = JSON.stringify(board);
+  history.push(before);
 
-  if(before !== JSON.stringify(board)){
+  if (e.key === "ArrowLeft") moveLeft();
+  if (e.key === "ArrowRight") moveRight();
+  if (e.key === "ArrowUp") moveUp();
+  if (e.key === "ArrowDown") moveDown();
+
+  let after = JSON.stringify(board);
+
+  if (before !== after) {
     addTile();
     draw();
     triggerFX();
@@ -285,13 +293,12 @@ function triggerFX(){
   tiles.forEach(t=>{
     if(t.textContent !== "" && parseInt(t.textContent) >= 32){
       t.classList.add("merge");
-
-      setTimeout(()=>{
-        t.classList.remove("merge");
-      },200);
+      setTimeout(()=>t.classList.remove("merge"),200);
     }
   });
 }
+
+// ================= UNDO =================
 function undo(){
 
   if(history.length === 0) return;
@@ -303,6 +310,7 @@ function undo(){
 // ================= RESTART =================
 function restart(){
   won = false;
+  history = [];
   init();
 }
 

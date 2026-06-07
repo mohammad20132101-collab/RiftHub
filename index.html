@@ -13,6 +13,33 @@ body {
   color: white;
 }
 
+/* LEADERBOARD BUTTON */
+#lbBtn {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  background: #4c6fff;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 999;
+}
+
+/* LEADERBOARD PANEL */
+#lbPanel {
+  position: fixed;
+  top: 60px;
+  right: 15px;
+  width: 260px;
+  background: #1a1a2e;
+  border: 2px solid #4c6fff;
+  border-radius: 12px;
+  padding: 10px;
+  display: none;
+  z-index: 999;
+}
+
 #loginScreen {
   text-align: center;
   padding: 100px 20px;
@@ -60,8 +87,6 @@ header {
   flex-direction: column;
   gap: 15px;
   padding: 10px;
-  max-height: 500px;
-  overflow-y: auto;
 }
 
 .game-card {
@@ -69,12 +94,6 @@ header {
   border-radius: 12px;
   text-align: center;
   overflow: hidden;
-}
-
-.game-card img {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
 }
 
 .game-info {
@@ -98,10 +117,24 @@ a {
 
 <body>
 
+<!-- LEADERBOARD UI -->
+<div id="lbBtn" onclick="toggleLB()">🏆</div>
+
+<div id="lbPanel">
+  <h3>Leaderboard</h3>
+
+  <button onclick="loadLB('pong')">Pong</button>
+  <button onclick="loadLB('2048')">2048</button>
+  <button onclick="loadLB('flappy')">Flappy</button>
+  <button onclick="loadLB('runner')">Runner</button>
+  <button onclick="loadLB('defence')">Defence</button>
+
+  <div id="lbList">Select a game</div>
+</div>
+
 <audio id="bgMusic" autoplay loop>
   <source src="magpiemusic-action-trailer-promo-rock-513687.mp3" type="audio/mpeg">
 </audio>
-
 
 <!-- LOGIN -->
 <div id="loginScreen">
@@ -126,44 +159,27 @@ a {
 
 <div class="game-grid">
 
-  <div class="game-card" data-name="snake">
-    <div class="game-info">
-      <h3>Snake</h3>
-      <button onclick="openGame('snake.html','Snake')">Play</button>
-    </div>
-  </div>
-
-  <div class="game-card" data-name="tetris">
-    <div class="game-info">
-      <h3>Tetris</h3>
-      <button onclick="openGame('tetris.html','Tetris')">Play</button>
-    </div>
-  </div>
-
   <div class="game-card" data-name="pong">
     <div class="game-info">
       <h3>Pong</h3>
-      <button onclick="openGame('pong.html','Pong')">Play</button>
+      <button onclick="openGame('pong.html','pong')">Play</button>
     </div>
   </div>
-    <div class="game-card" data-name="flappyblock">
-    <div class="game-info">
-      <h3>Flappy Block</h3>
-      <button onclick="openGame('flappyblock.html','Flappy Block')">Play</button>
-    </div>
-  </div>
-<div class="game-card" data-name="2048">
+
+  <div class="game-card" data-name="2048">
     <div class="game-info">
       <h3>2048</h3>
       <button onclick="openGame('2048.html','2048')">Play</button>
     </div>
   </div>
-<div class="game-card" data-name="memorymatch">
+
+  <div class="game-card" data-name="memory">
     <div class="game-info">
       <h3>Memory Match</h3>
-      <button onclick="openGame('memorymatch.html','Memory Match')">Play</button>
+      <button onclick="openGame('memory.html','memory')">Play</button>
     </div>
   </div>
+
 </div>
 </section>
 
@@ -171,21 +187,19 @@ a {
 <h2 align="center">🔥 Exclusives 🔥</h2>
 
 <div class="exclusives-list">
-
   <div class="game-card">
     <div class="game-info">
       <h3>Rift Runner</h3>
-      <button onclick="openGame('riftrunner.html','Rift Runner','https://via.placeholder.com/400x200/ff4c4c')">Play</button>
+      <button onclick="openGame('runner.html','runner')">Play</button>
     </div>
   </div>
 
   <div class="game-card">
     <div class="game-info">
-      <h3>Rift Defense</h3>
-      <button onclick="openGame('riftdefense.html','Rift Defense','https://via.placeholder.com/400x200/00ff99')">Play</button>
+      <h3>Rift Defence</h3>
+      <button onclick="openGame('defence.html','defence')">Play</button>
     </div>
   </div>
-
 </div>
 </section>
 
@@ -199,15 +213,8 @@ a {
 <footer>
 <h3>Rift Hub</h3>
 <p>Free browser game platform.</p>
-
-<div>
-  <a onclick="alert('About: We are a local game hub - made for students, by students. We aim to help entertain students and adults alike.')">About</a>
-  <a onclick="alert('Contact: officialrifthub@gmail.com')">Contact</a>
-  <a onclick="alert('Privacy: we only store local data and the only global aspect is your gmail, which is automatically protected with Google level security.')">Privacy</a>
-</div>
 </footer>
 
-<!-- FIREBASE (ONLY ONE CLEAN VERSION) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import {
@@ -217,97 +224,114 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
 const firebaseConfig = {
-  apiKey: "AIzaSyD2XQWUKM4SQO8azXkm2XwG_e9ZQWpYJi0",
+  apiKey: "AIzaSyD2XQWUKM4SQOazXkm2XwG_e9ZQWpYJi0",
   authDomain: "rifthub-4275a.firebaseapp.com",
   projectId: "rifthub-4275a",
-  storageBucket: "rifthub-4275a.firebasestorage.app",
-  messagingSenderId: "56609352786",
-  appId: "1:56609352786:web:55dc5d3b32412bf1e3838b"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 /* LOGIN */
 window.login = function () {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  signInWithEmailAndPassword(auth, email, password)
-    .then(u => loadUser(u.user.email))
-    .catch(err => alert(err.message));
+  signInWithEmailAndPassword(auth,
+    email.value, password.value
+  ).then(u => loadUser(u.user.email));
 };
 
-/* SIGN UP */
 window.signup = function () {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  createUserWithEmailAndPassword(auth, email, password)
-    .then(u => loadUser(u.user.email))
-    .catch(err => alert(err.message));
+  createUserWithEmailAndPassword(auth,
+    email.value, password.value
+  ).then(u => loadUser(u.user.email));
 };
 
-function loadUser(email) {
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("site").style.display = "block";
-  document.getElementById("username").textContent = email;
-
-  document.getElementById("bgMusic").play().catch(() => {});
+function loadUser(email){
+  loginScreen.style.display="none";
+  site.style.display="block";
+  username.textContent=email;
+  bgMusic.volume=0.05;
+  bgMusic.play().catch(()=>{});
 }
 
-onAuthStateChanged(auth, (user) => {
-  if (user) loadUser(user.email);
+onAuthStateChanged(auth,(u)=>{
+  if(u) loadUser(u.email);
 });
 
-/* GAME + HISTORY */
-window.openGame = function (page, name, img) {
-  let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
-
-  history = history.filter(g => g.name !== name);
-  history.unshift({ name, page, img });
-  history = history.slice(0, 3);
-
-  localStorage.setItem("riftHistory", JSON.stringify(history));
-  renderHistory();
-
-  window.location.href = page;
+/* GAME */
+window.openGame=function(page,name){
+  let h=JSON.parse(localStorage.getItem("riftHistory")||"[]");
+  h=h.filter(x=>x.name!==name);
+  h.unshift({page,name});
+  h=h.slice(0,3);
+  localStorage.setItem("riftHistory",JSON.stringify(h));
+  location.href=page;
 };
 
-function renderHistory() {
-  const grid = document.getElementById("historyGrid");
-  let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
-
-  grid.innerHTML = history.map(g => `
+function renderHistory(){
+  let h=JSON.parse(localStorage.getItem("riftHistory")||"[]");
+  historyGrid.innerHTML=h.map(x=>`
     <div class="game-card">
       <div class="game-info">
-        <h3>${g.name}</h3>
-        <button onclick="openGame('${g.page}','${g.name}',)">Play</button>
+        <h3>${x.name}</h3>
+        <button onclick="openGame('${x.page}','${x.name}')">Play</button>
       </div>
     </div>
   `).join("");
 }
-
 renderHistory();
 
-/* SEARCH (FIXED) */
-document.getElementById("search").addEventListener("input", function () {
-  const val = this.value.toLowerCase();
-
-  document.querySelectorAll(".game-grid .game-card").forEach(card => {
-    const name = card.getAttribute("data-name");
-    if (!name) return;
-
-    card.style.display = name.toLowerCase().includes(val) ? "block" : "none";
+/* SEARCH */
+search.oninput=()=>{
+  document.querySelectorAll(".game-card").forEach(c=>{
+    let n=c.dataset.name;
+    if(!n) return;
+    c.style.display=n.includes(search.value.toLowerCase())?"block":"none";
   });
-});
-/* MUSIC */
+};
 
-const music = document.getElementById("bgMusic");
+/* LEADERBOARD */
+window.toggleLB=function(){
+  lbPanel.style.display =
+    lbPanel.style.display==="block"?"none":"block";
+};
 
-/* Very, very quiet */
-music.volume = 0.05;
+window.loadLB=async function(game){
+
+  lbList.innerHTML="Loading...";
+
+  const q=query(
+    collection(db,"scores"),
+    orderBy("score","desc"),
+    limit(50)
+  );
+
+  const snap=await getDocs(q);
+
+  let html=`<h4>${game.toUpperCase()}</h4>`;
+  let rank=1;
+
+  snap.forEach(d=>{
+    let x=d.data();
+    if(x.game===game && rank<=5){
+      html+=`<p>#${rank} ${x.email}<br>Score: ${x.score}</p><hr>`;
+      rank++;
+    }
+  });
+
+  lbList.innerHTML=html||"No scores";
+};
+
 </script>
 
 </body>

@@ -185,12 +185,12 @@ footer a {
 
 <div class="game-grid">
 
-  <div class="game-card" data-name="snake"><h3>Snake</h3><button onclick="openGame('snake.html')">Play</button></div>
-  <div class="game-card" data-name="tetris"><h3>Tetris</h3><button onclick="openGame('tetris.html')">Play</button></div>
-  <div class="game-card" data-name="pong"><h3>Pong</h3><button onclick="openGame('pong.html')">Play</button></div>
-  <div class="game-card" data-name="flappy"><h3>Flappy Block</h3><button onclick="openGame('flappyblock.html')">Play</button></div>
-  <div class="game-card" data-name="2048"><h3>2048</h3><button onclick="openGame('2048.html')">Play</button></div>
-  <div class="game-card" data-name="memory"><h3>Memory Match</h3><button onclick="openGame('memorymatch.html')">Play</button></div>
+  <div class="game-card" data-name="snake"><h3>Snake</h3><button onclick="openGame('snake.html', 'Snake')">Play</button></div>
+  <div class="game-card" data-name="tetris"><h3>Tetris</h3><button onclick="openGame('tetris.html', 'Tetris')">Play</button></div>
+  <div class="game-card" data-name="pong"><h3>Pong</h3><button onclick="openGame('pong.html', 'Pong')">Play</button></div>
+  <div class="game-card" data-name="flappy"><h3>Flappy Block</h3><button onclick="openGame('flappyblock.html', 'Flappy Block')">Play</button></div>
+  <div class="game-card" data-name="2048"><h3>2048</h3><button onclick="openGame('2048.html', '2048')">Play</button></div>
+  <div class="game-card" data-name="memory"><h3>Memory Match</h3><button onclick="openGame('memorymatch.html', 'Memory Match')">Play</button></div>
 
 </div>
 </section>
@@ -268,13 +268,45 @@ function loadUser(email){
   loginScreen.style.display="none";
   site.style.display="block";
   username.textContent=email;
+
+  renderHistory();
 }
 
 onAuthStateChanged(auth,(u)=>{
   if(u) loadUser(u.email);
 });
 
-window.openGame = (p)=> window.location.href=p;
+window.openGame = (p, name) => {
+  let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
+
+  // remove duplicates
+  history = history.filter(g => g.name !== name);
+
+  // add newest first
+  history.unshift({ name, page: p });
+
+  // keep only 6 items
+  history = history.slice(0, 6);
+
+  localStorage.setItem("riftHistory", JSON.stringify(history));
+
+  renderHistory();
+
+  window.location.href = p;
+};
+function renderHistory() {
+  const grid = document.getElementById("historyGrid");
+  let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
+
+  grid.innerHTML = history.map(g => `
+    <div class="game-card">
+      <div class="game-info">
+        <h3>${g.name}</h3>
+        <button onclick="openGame('${g.page}','${g.name}')">Play</button>
+      </div>
+    </div>
+  `).join("");
+}
 
 window.toggleLB = () => {
   const p = document.getElementById("lbPanel");

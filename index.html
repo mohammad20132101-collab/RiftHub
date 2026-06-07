@@ -57,8 +57,6 @@ button {
   grid-template-columns: repeat(3, 1fr);
   gap: 15px;
   padding: 10px;
-  max-width: 900px;
-  margin: 0 auto;
 }
 
 .game-card {
@@ -69,17 +67,19 @@ button {
 }
 
 /* EXCLUSIVES */
-.exclusives-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+.exclusives-list {
+  display: flex;
+  flex-direction: column;
   gap: 15px;
-  max-width: 900px;
-  margin: 0 auto;
   padding: 10px;
 }
 
-.game-card.exclusive {
-  width: 100%;
+/* HISTORY */
+#historyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  padding: 10px;
 }
 
 /* FOOTER */
@@ -96,7 +96,8 @@ footer a {
   cursor: pointer;
 }
 
-/* LEADERBOARD */
+/* ================= LEADERBOARD ================= */
+
 #lbBtn {
   position: fixed;
   top: 15px;
@@ -112,7 +113,7 @@ footer a {
   position: fixed;
   top: 60px;
   right: 15px;
-  width: 280px;
+  width: 300px;
   background: #141428;
   border: 2px solid #4c6fff;
   border-radius: 12px;
@@ -142,6 +143,7 @@ footer a {
 
 <div id="lbPanel">
   <h3>Leaderboard</h3>
+
   <div class="lb-tabs">
     <button onclick="loadLB('Snake')">Snake</button>
     <button onclick="loadLB('Tetris')">Tetris</button>
@@ -152,6 +154,7 @@ footer a {
     <button onclick="loadLB('Runner')">Runner</button>
     <button onclick="loadLB('Defence')">Defence</button>
   </div>
+
   <div id="lbList">Select a game</div>
 </div>
 
@@ -195,20 +198,27 @@ footer a {
 <section>
 <h2 align="center">🔥 Exclusives 🔥</h2>
 
-<div class="exclusives-grid">
+<div class="exclusives-list">
 
-  <div class="game-card exclusive">
+  <div class="game-card">
     <h3>Rift Runner</h3>
     <button onclick="openGame('riftrunner.html')">Play</button>
   </div>
 
-  <div class="game-card exclusive">
+  <div class="game-card">
     <h3>Rift Defence</h3>
     <button onclick="openGame('riftdefence.html')">Play</button>
   </div>
 
 </div>
 </section>
+
+<section>
+<h2 align="center">🕘 Recently Played</h2>
+<div id="historyGrid"></div>
+</section>
+
+</div>
 
 <footer>
 <h3>Rift Hub</h3>
@@ -218,8 +228,6 @@ footer a {
 <a onclick="alert('Contact: officialrifthub@gmail.com')">Contact</a>
 <a onclick="alert('Privacy: Only email + local history')">Privacy</a>
 </footer>
-
-</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
@@ -231,7 +239,8 @@ const firebaseConfig = {
   projectId: "rifthub-4275a",
   storageBucket: "rifthub-4275a.firebasestorage.app",
   messagingSenderId: "56609352786",
-  appId: "1:56609352786:web:55dc5d3b32412bf1e3838b"
+  appId: "1:56609352786:web:55dc5d3b32412bf1e3838b",
+  measurementId: "G-9NDLTX6KVY"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -265,7 +274,7 @@ onAuthStateChanged(auth,(u)=>{
   if(u) loadUser(u.email);
 });
 
-window.openGame = (page)=> window.location.href = page;
+window.openGame = (p)=> window.location.href=p;
 
 window.toggleLB = () => {
   const p = document.getElementById("lbPanel");

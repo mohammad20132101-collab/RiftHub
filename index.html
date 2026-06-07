@@ -13,7 +13,6 @@ body {
   color: white;
 }
 
-/* HEADER */
 header {
   padding: 20px;
   text-align: center;
@@ -28,7 +27,6 @@ header {
   border: none;
 }
 
-/* LOGIN */
 #loginScreen {
   text-align: center;
   padding: 100px 20px;
@@ -40,7 +38,6 @@ header {
   margin: 5px;
 }
 
-/* BUTTONS */
 button {
   padding: 8px 15px;
   border: none;
@@ -51,7 +48,6 @@ button {
   margin-top: 5px;
 }
 
-/* GAME GRID */
 .game-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -66,7 +62,6 @@ button {
   padding: 10px;
 }
 
-/* EXCLUSIVES */
 .exclusives-list {
   display: flex;
   flex-direction: column;
@@ -74,7 +69,6 @@ button {
   padding: 10px;
 }
 
-/* HISTORY */
 #historyGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -82,22 +76,7 @@ button {
   padding: 10px;
 }
 
-/* FOOTER */
-footer {
-  margin-top: 40px;
-  padding: 20px;
-  background: #1a1a2e;
-  text-align: center;
-}
-
-footer a {
-  color: #4c6fff;
-  margin: 0 10px;
-  cursor: pointer;
-}
-
-/* ================= LEADERBOARD ================= */
-
+/* LEADERBOARD */
 #lbBtn {
   position: fixed;
   top: 15px;
@@ -122,11 +101,6 @@ footer a {
   z-index: 999;
 }
 
-.lb-tabs button {
-  width: 100%;
-  margin: 3px 0;
-}
-
 .lb-entry {
   background: #1a1a2e;
   padding: 8px;
@@ -138,29 +112,13 @@ footer a {
 
 <body>
 
-<!-- LEADERBOARD BUTTON -->
+<!-- LEADERBOARD -->
 <div id="lbBtn" onclick="toggleLB()">🏆</div>
 
 <div id="lbPanel">
-  <h3 align=center>Leaderboard</h3>
-
-  <div class="lb-tabs">
-    <button onclick="loadLB('Snake')">Snake</button>
-    <button onclick="loadLB('Tetris')">Tetris</button>
-    <button onclick="loadLB('Pong')">Pong</button>
-    <button onclick="loadLB('Flappy Block')">Flappy Block</button>
-    <button onclick="loadLB('2048')">2048</button>
-    <button onclick="loadLB('Memory Match')">Memory Match</button>
-    <button onclick="loadLB('Rift Runner')">Rift Runner</button>
-    <button onclick="loadLB('Rift Defence')">Rift Defence</button>
-  </div>
-<br>
-  <div id="lbList" align = center>Select a game</div>
+  <h3 align="center">Leaderboard</h3>
+  <div id="lbList" align="center">Select a game</div>
 </div>
-
-<audio id="bgMusic" autoplay loop>
-  <source src="magpiemusic-action-trailer-promo-rock-513687.mp3">
-</audio>
 
 <!-- LOGIN -->
 <div id="loginScreen">
@@ -180,148 +138,121 @@ footer a {
   <input type="text" id="search" placeholder="Search games...">
 </header>
 
-<section>
 <h2 align="center">Games</h2>
 
 <div class="game-grid">
-
-  <div class="game-card" data-name="snake"><h3>Snake</h3><button onclick="openGame('snake.html', 'Snake')">Play</button></div>
-  <div class="game-card" data-name="tetris"><h3>Tetris</h3><button onclick="openGame('tetris.html', 'Tetris')">Play</button></div>
-  <div class="game-card" data-name="pong"><h3>Pong</h3><button onclick="openGame('pong.html', 'Pong')">Play</button></div>
-  <div class="game-card" data-name="flappy"><h3>Flappy Block</h3><button onclick="openGame('flappyblock.html', 'Flappy Block')">Play</button></div>
-  <div class="game-card" data-name="2048"><h3>2048</h3><button onclick="openGame('2048.html', '2048')">Play</button></div>
-  <div class="game-card" data-name="memory"><h3>Memory Match</h3><button onclick="openGame('memorymatch.html', 'Memory Match')">Play</button></div>
-
+  <div class="game-card"><h3>Snake</h3><button onclick="openGame('snake.html','Snake')">Play</button></div>
+  <div class="game-card"><h3>Tetris</h3><button onclick="openGame('tetris.html','Tetris')">Play</button></div>
+  <div class="game-card"><h3>Pong</h3><button onclick="openGame('pong.html','Pong')">Play</button></div>
 </div>
-</section>
 
-<section>
 <h2 align="center">🔥 Exclusives 🔥</h2>
 
 <div class="exclusives-list">
-
   <div class="game-card">
     <h3>Rift Runner</h3>
-    <button onclick="openGame('riftrunner.html', ' Rift Runner')">Play</button>
+    <button onclick="openGame('riftrunner.html','Rift Runner')">Play</button>
   </div>
-
-  <div class="game-card">
-    <h3>Rift Defence</h3>
-    <button onclick="openGame('riftdefense.html', 'Rift Defence')">Play</button>
-  </div>
-
 </div>
-</section>
 
-<section>
 <h2 align="center">🕘 Recently Played</h2>
 <div id="historyGrid"></div>
-</section>
 
 </div>
 
-<footer>
-<h3>Rift Hub</h3>
-<p>Free browser game platform.</p>
-
-<a onclick="alert('About: Student-made game hub')">About</a>
-<a onclick="alert('Contact: officialrifthub@gmail.com')">Contact</a>
-<a onclick="alert('Privacy: Only email + local history')">Privacy</a>
-</footer>
-
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+
+import { getDatabase, ref, get, set } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2XQWUKM4SQO8azXkm2XwG_e9ZQWpYJi0",
   authDomain: "rifthub-4275a.firebaseapp.com",
-  projectId: "rifthub-4275a",
-  storageBucket: "rifthub-4275a.firebasestorage.app",
-  messagingSenderId: "56609352786",
-  appId: "1:56609352786:web:55dc5d3b32412bf1e3838b",
-  measurementId: "G-9NDLTX6KVY"
+  databaseURL: "https://rifthub-4275a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "rifthub-4275a"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getDatabase(app);
 
+/* AUTH */
 window.login = () => {
-  const e = email.value;
-  const p = password.value;
-
-  signInWithEmailAndPassword(auth, e, p)
+  signInWithEmailAndPassword(auth, email.value, password.value)
     .then(u => loadUser(u.user.email))
     .catch(err => alert(err.message));
 };
 
 window.signup = () => {
-  const e = email.value;
-  const p = password.value;
-
-  createUserWithEmailAndPassword(auth, e, p)
+  createUserWithEmailAndPassword(auth, email.value, password.value)
     .then(u => loadUser(u.user.email))
     .catch(err => alert(err.message));
 };
 
-function loadUser(email){
+function loadUser(e){
   loginScreen.style.display="none";
   site.style.display="block";
-  username.textContent=email;
-
+  username.textContent=e;
   renderHistory();
 }
 
-onAuthStateChanged(auth,(u)=>{
+onAuthStateChanged(auth,u=>{
   if(u) loadUser(u.email);
 });
 
-window.openGame = (p, name) => {
-  let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
-
-  // remove duplicates
-  history = history.filter(g => g.name !== name);
-
-  // add newest first
-  history.unshift({ name, page: p });
-
-  // keep only 3 items
-  history = history.slice(0, 3);
-
-  localStorage.setItem("riftHistory", JSON.stringify(history));
-
+/* HISTORY */
+window.openGame = (p,name)=>{
+  let h = JSON.parse(localStorage.getItem("riftHistory"))||[];
+  h = h.filter(g=>g.name!==name);
+  h.unshift({name,page:p});
+  h = h.slice(0,3);
+  localStorage.setItem("riftHistory",JSON.stringify(h));
   renderHistory();
-
-  window.location.href = p;
+  location.href=p;
 };
-function renderHistory() {
-  const grid = document.getElementById("historyGrid");
-  let history = JSON.parse(localStorage.getItem("riftHistory")) || [];
 
-  grid.innerHTML = history.map(g => `
+function renderHistory(){
+  let h = JSON.parse(localStorage.getItem("riftHistory"))||[];
+  historyGrid.innerHTML = h.map(g=>`
     <div class="game-card">
-      <div class="game-info">
-        <h3>${g.name}</h3>
-        <button onclick="openGame('${g.page}','${g.name}')">Play</button>
-      </div>
+      <h3>${g.name}</h3>
+      <button onclick="openGame('${g.page}','${g.name}')">Play</button>
     </div>
   `).join("");
 }
 
+/* LEADERBOARD */
 window.toggleLB = () => {
-  const p = document.getElementById("lbPanel");
-  p.style.display = p.style.display === "block" ? "none" : "block";
+  lbPanel.style.display = lbPanel.style.display==="block"?"none":"block";
 };
 
-window.loadLB = (g) => {
-  document.getElementById("lbList").innerHTML =
-    "Leaderboard for " + g;
+window.saveScore = function(name,score){
+  set(ref(db,"scores/"+name), score);
 };
 
-document.getElementById("search").addEventListener("input",function(){
-  const v=this.value.toLowerCase();
+window.loadLeaderboard = async function(){
+  const snap = await get(ref(db,"scores"));
+  const data = snap.val() || {};
+
+  const list = Object.entries(data)
+    .sort((a,b)=>b[1]-a[1])
+    .map(x=>`<div class="lb-entry">${x[0]}: ${x[1]}</div>`)
+    .join("");
+
+  lbList.innerHTML = list || "No scores yet";
+};
+
+window.loadLB = () => loadLeaderboard();
+
+/* SEARCH */
+search.addEventListener("input", e=>{
   document.querySelectorAll(".game-card").forEach(c=>{
-    c.style.display = c.innerText.toLowerCase().includes(v) ? "block":"none";
+    c.style.display = c.innerText.toLowerCase().includes(e.target.value.toLowerCase())
+      ? "block":"none";
   });
 });
 </script>

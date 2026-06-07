@@ -176,6 +176,7 @@ from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 import { getDatabase, ref, get, set } 
 from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
 
+/* ===== FIREBASE SETUP ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyD2XQWUKM4SQO8azXkm2XwG_e9ZQWpYJi0",
   authDomain: "rifthub-4275a.firebaseapp.com",
@@ -189,7 +190,7 @@ const db = getDatabase(app);
 
 console.log("Firebase loaded");
 
-// LOGIN
+/* ===== LOGIN ===== */
 window.login = () => {
   const e = document.getElementById("email").value;
   const p = document.getElementById("password").value;
@@ -199,7 +200,7 @@ window.login = () => {
     .catch(err => alert(err.message));
 };
 
-// SIGNUP
+/* ===== SIGNUP ===== */
 window.signup = () => {
   const e = document.getElementById("email").value;
   const p = document.getElementById("password").value;
@@ -209,28 +210,93 @@ window.signup = () => {
     .catch(err => alert(err.message));
 };
 
+/* ===== USER LOGIN HANDLER ===== */
 function loadUser(email){
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("site").style.display = "block";
   document.getElementById("username").textContent = email;
+
+  renderHistory();
 }
 
 onAuthStateChanged(auth, u => {
-  if (u) loadUser(u.email);
+  if (u) {
+    loadUser(u.email);
+  } else {
+    document.getElementById("loginScreen").style.display = "block";
+    document.getElementById("site").style.display = "none";
+  }
 });
 
-// LEADERBOARD TEST
+/* ===== OPEN GAME + HISTORY ===== */
+window.openGame = (p, name) => {
+  let h = JSON.parse(localStorage.getItem("riftHistory")) || [];
+
+  h = h.filter(g => g.name !== name);
+  h.unshift({ name, page: p });
+  h = h.slice(0, 3);
+
+  localStorage.setItem("riftHistory", JSON.stringify(h));
+
+  renderHistory();
+  window.location.href = p;
+};
+
+/* ===== RENDER HISTORY ===== */
+function renderHistory() {
+  const grid = document.getElementById("historyGrid");
+  let h = JSON.parse(localStorage.getItem("riftHistory")) || [];
+
+  grid.innerHTML = h.map(g => `
+    <div class="game-card">
+      <h3>${g.name}</h3>
+      <button onclick="openGame('${g.page}','${g.name}')">Play</button>
+    </div>
+  `).join("");
+}
+
+/* ===== SEARCH ===== */
+window.addEventListener("DOMContentLoaded", () => {
+  const search = document.getElementById("search");
+
+  if (!search) return;
+
+  search.addEventListener("input", (e) => {
+    document.querySelectorAll(".game-grid > .game-card")forEach(c => {
+      c.style.display =
+        c.innerText.toLowerCase().includes(e.target.value.toLowerCase())
+          ? "block"
+          : "none";
+    });
+  });
+});
+
+/* ===== LEADERBOARD ===== */
+window.toggleLB = () => {
+  const panel = document.getElementById("lbPanel");
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+  loadLeaderboard();
+};
+
 window.saveScore = (name, score) => {
   set(ref(db, "scores/" + name), score);
 };
 
 window.loadLeaderboard = async () => {
   const snap = await get(ref(db, "scores"));
-  console.log(snap.val());
-};
-</script>
-</div>
+  const data = snap.val() || {};
 
+  const sorted = Object.entries(data)
+    .sort((a, b) => b[1] - a[1])
+    .map(x => `<div class="lb-entry">${x[0]}: ${x[1]}</div>`)
+    .join("");
+
+  document.getElementById("lbList").innerHTML =
+    sorted || "No scores yet";
+};
+
+
+</script>
 <footer>
   <h3 align = center>🎮 Rift Hub</h3>
   <p align = center>Free browser game platform made for fun.</p>
@@ -247,6 +313,5 @@ window.loadLeaderboard = async () => {
     © 2026 Rift Hub
   </p>
 </footer>
-
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rift Hub - Pac Core</title>
+<title>Rift Hub - Arcade Core</title>
 
 <style>
 body {
@@ -14,33 +14,30 @@ body {
   align-items: center;
   height: 100vh;
   font-family: Arial;
-  color: white;
+}
+
+canvas {
+  background: #000;
+  border: 2px solid #111a2b;
 }
 
 #ui {
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 10;
-  background: rgba(10,15,25,0.8);
+  background: rgba(10,15,25,0.85);
   padding: 10px;
-  border: 1px solid #1a2233;
-  border-radius: 10px;
-  width: 200px;
-}
-
-button {
-  background: #121a2a;
-  border: 1px solid #2a3a55;
   color: white;
-  padding: 5px 8px;
-  margin: 2px;
-  cursor: pointer;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #1a2233;
 }
-
-canvas {
-  background: #000;
-  border: 2px solid #111a2b;
+button {
+  background:#111a2b;
+  color:white;
+  border:1px solid #2a3a55;
+  margin-top:5px;
+  padding:5px;
 }
 </style>
 </head>
@@ -48,13 +45,11 @@ canvas {
 <body>
 
 <div id="ui">
-  <b>🎮 Rift Hub Pac</b><br><br>
-  Score: <span id="score">0</span><br>
-  Lives: <span id="lives">3</span><br>
-  Mode: <span id="mode">Normal</span><br><br>
-
-  <button onclick="restart()">Restart</button>
-  <button onclick="history.back()">Back</button>
+Score: <span id="score">0</span><br>
+Lives: <span id="lives">3</span><br>
+Mode: <span id="mode">Scatter</span><br>
+<button onclick="restart()">Restart</button>
+<button onclick="history.back()">Back</button>
 </div>
 
 <canvas id="c" width="600" height="600"></canvas>
@@ -63,158 +58,179 @@ canvas {
 const c = document.getElementById("c");
 const ctx = c.getContext("2d");
 
-const TILE = 20;
-const ROWS = 30;
-const COLS = 30;
+const T = 20;
+const R = 30;
+const C = 30;
 
 let score = 0;
 let lives = 3;
+
+/* ===== MODE SYSTEM (CHASE / SCATTER) ===== */
+let mode = "scatter";
+let modeTimer = 0;
+
 let fear = 0;
 
-let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+/* ===== GRID ===== */
+let grid = Array.from({length:R},()=>Array(C).fill(0));
 
-// walls
-for (let i=0;i<ROWS;i++){
+for(let i=0;i<R;i++){
   grid[i][0]=1;
-  grid[i][COLS-1]=1;
+  grid[i][C-1]=1;
 }
-for (let i=0;i<COLS;i++){
+for(let i=0;i<C;i++){
   grid[0][i]=1;
-  grid[ROWS-1][i]=1;
+  grid[R-1][i]=1;
 }
 
-// simple maze (stable, not random chaos = no ghost bugs)
-for (let i=0;i<120;i++){
+/* maze */
+for(let i=0;i<140;i++){
   let x = 2 + Math.random()*26|0;
   let y = 2 + Math.random()*26|0;
-  if (!(x>10 && x<19 && y>10 && y<19)) grid[y][x]=1;
+  if(!(x>10&&x<19&&y>10&&y<19)) grid[y][x]=1;
 }
 
-/* ===== GHOST HOUSE ===== */
-const house = {x:15,y:15};
-
-for (let y=12;y<=17;y++){
-  for (let x=12;x<=17;x++){
+/* ghost house */
+for(let y=12;y<=17;y++){
+  for(let x=12;x<=17;x++){
     grid[y][x]=1;
   }
 }
-grid[12][15]=0; // door
+grid[12][15]=0;
 
+/* ===== PLAYER ===== */
 let pac = {x:1,y:1,dx:1,dy:0};
 
-/* ===== GHOST PERSONALITIES ===== */
+/* ===== GHOSTS ===== */
 let ghosts = [
-  {name:"Blinky", x:15,y:14,color:"#ff2d2d", personality:"chase"},
-  {name:"Pinky",  x:14,y:15,color:"#ff77ff", personality:"ambush"},
-  {name:"Inky",   x:16,y:15,color:"#00e5ff", personality:"random"},
-  {name:"Clyde",  x:15,y:16,color:"#ffb347", personality:"scatter"}
+  {x:15,y:14,c:"#ff2d2d",dir:{x:0,y:0}},
+  {x:14,y:15,c:"#ff77ff",dir:{x:0,y:0}},
+  {x:16,y:15,c:"#00e5ff",dir:{x:0,y:0}},
+  {x:15,y:16,c:"#ffb347",dir:{x:0,y:0}}
 ];
 
-let pellets = [];
-let power = [];
-
-for (let y=1;y<ROWS-1;y++){
-  for (let x=1;x<COLS-1;x++){
-    if (grid[y][x]===0) pellets.push({x,y});
+let pellets=[];
+for(let y=1;y<R-1;y++){
+  for(let x=1;x<C-1;x++){
+    if(grid[y][x]===0) pellets.push({x,y});
   }
 }
 
-power = [
+/* ===== POWER PELLETS ===== */
+let power=[
   {x:1,y:1},{x:28,y:1},{x:1,y:28},{x:28,y:28}
 ];
 
+/* ===== HELPERS ===== */
 function valid(x,y){
-  return grid[y]?.[x] !== 1;
+  return grid[y]?.[x]!==1;
 }
 
-/* ===== PAC MOVEMENT ===== */
-function movePac(){
-  let nx = pac.x + pac.dx;
-  let ny = pac.y + pac.dy;
+function wrap(o){
+  if(o.x<0)o.x=C-1;
+  if(o.x>=C)o.x=0;
+  if(o.y<0)o.y=R-1;
+  if(o.y>=R)o.y=0;
+}
 
-  if (valid(nx,ny)){
-    pac.x = nx;
-    pac.y = ny;
+function dist(a,b){
+  return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+}
+
+/* ===== PAC ===== */
+function movePac(){
+  let nx=pac.x+pac.dx;
+  let ny=pac.y+pac.dy;
+
+  wrap({x:nx,y:ny});
+
+  if(valid(nx,ny)){
+    pac.x=nx;
+    pac.y=ny;
   }
 
-  // pellets
   pellets = pellets.filter(p=>{
-    if (p.x===pac.x && p.y===pac.y){
-      score += 10;
+    if(p.x===pac.x&&p.y===pac.y){
+      score+=10;
       return false;
     }
     return true;
   });
 
-  // power
   power = power.filter(p=>{
-    if (p.x===pac.x && p.y===pac.y){
-      fear = 70;
+    if(p.x===pac.x&&p.y===pac.y){
+      fear=80;
       return false;
     }
     return true;
   });
 }
 
-/* ===== GHOST AI (PERSONALITY-BASED) ===== */
-function dist(a,b){ return Math.abs(a.x-b.x)+Math.abs(a.y-b.y); }
-
+/* ===== FIXED GHOST AI (NO JITTER) ===== */
 function moveGhost(g){
-  let dirs = [
+  let dirs=[
     {x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}
   ];
 
-  let best = dirs[0];
-  let bestScore = g.personality==="random" ? Math.random()*10 : 9999;
+  // prevent instant reverse
+  dirs = dirs.filter(d=>{
+    return !(d.x===-g.dir.x && d.y===-g.dir.y);
+  });
 
-  for (let d of dirs){
-    let nx = g.x + d.x;
-    let ny = g.y + d.y;
+  let best=null;
+  let bestScore=9999;
 
-    if (!valid(nx,ny)) continue;
+  for(let d of dirs){
+    let nx=g.x+d.x;
+    let ny=g.y+d.y;
 
-    let scoreVal = dist({x:nx,y:ny}, pac);
+    if(!valid(nx,ny)) continue;
 
-    if (fear>0) scoreVal *= -1;
+    let s = dist({x:nx,y:ny}, pac);
 
-    // PERSONALITY RULES
-    if (g.personality==="chase"){
-      if (scoreVal < bestScore){ bestScore = scoreVal; best = d; }
+    if(mode==="scatter"){
+      s = dist({x:nx,y:ny},{x:28,y:28});
     }
 
-    if (g.personality==="ambush"){
-      let target = {x: pac.x + pac.dx*3, y: pac.y + pac.dy*3};
-      let d2 = dist({x:nx,y:ny}, target);
-      if (d2 < bestScore){ bestScore = d2; best = d; }
-    }
+    if(fear>0) s*=-1;
 
-    if (g.personality==="scatter"){
-      let corner = {x:28,y:28};
-      let d3 = dist({x:nx,y:ny}, corner);
-      if (d3 < bestScore){ bestScore = d3; best = d; }
-    }
-
-    if (g.personality==="random"){
-      if (Math.random()<0.3) best = d;
+    if(s<bestScore){
+      bestScore=s;
+      best=d;
     }
   }
 
-  g.x += best.x;
-  g.y += best.y;
+  if(!best){
+    best={x:-g.dir.x,y:-g.dir.y};
+  }
+
+  g.x+=best.x;
+  g.y+=best.y;
+  g.dir=best;
+
+  wrap(g);
+}
+
+/* ===== MODE SWITCH ===== */
+function updateMode(){
+  modeTimer++;
+  if(modeTimer<120) mode="scatter";
+  else if(modeTimer<300) mode="chase";
+  else modeTimer=0;
 }
 
 /* ===== COLLISION ===== */
 function check(){
   ghosts.forEach(g=>{
-    if (g.x===pac.x && g.y===pac.y){
-      if (fear>0){
-        score += 100;
-        g.x = 15; g.y = 15;
-      } else {
+    if(g.x===pac.x&&g.y===pac.y){
+      if(fear>0){
+        score+=100;
+        g.x=15;g.y=15;
+      }else{
         lives--;
-        pac.x=1; pac.y=1;
+        pac.x=1;pac.y=1;
 
-        if (lives<=0){
+        if(lives<=0){
           alert("Game Over: "+score);
           location.reload();
         }
@@ -228,12 +244,12 @@ function draw(){
   ctx.fillStyle="#000";
   ctx.fillRect(0,0,600,600);
 
-  // walls
-  for (let y=0;y<ROWS;y++){
-    for (let x=0;x<COLS;x++){
-      if (grid[y][x]===1){
-        ctx.fillStyle="#101827";
-        ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+  // maze
+  for(let y=0;y<R;y++){
+    for(let x=0;x<C;x++){
+      if(grid[y][x]){
+        ctx.fillStyle="#0f1624";
+        ctx.fillRect(x*T,y*T,T,T);
       }
     }
   }
@@ -242,65 +258,57 @@ function draw(){
   ctx.fillStyle="#bbb";
   pellets.forEach(p=>{
     ctx.beginPath();
-    ctx.arc(p.x*TILE+10,p.y*TILE+10,2,0,Math.PI*2);
+    ctx.arc(p.x*T+10,p.y*T+10,2,0,Math.PI*2);
     ctx.fill();
   });
 
   // power
-  ctx.fillStyle="#fff";
+  ctx.fillStyle="white";
   power.forEach(p=>{
     ctx.beginPath();
-    ctx.arc(p.x*TILE+10,p.y*TILE+10,5,0,Math.PI*2);
+    ctx.arc(p.x*T+10,p.y*T+10,5,0,Math.PI*2);
     ctx.fill();
   });
 
   // pac
   ctx.fillStyle="yellow";
   ctx.beginPath();
-  ctx.arc(pac.x*TILE+10,pac.y*TILE+10,8,0,Math.PI*2);
+  ctx.arc(pac.x*T+10,pac.y*T+10,8,0,Math.PI*2);
   ctx.fill();
 
-  // ghosts (FIXED: no disappearing bug)
+  // ghosts
   ghosts.forEach(g=>{
-    let col = g.color;
-
-    if (fear>0){
-      col = (fear<20) ? "#ffffff" : "#2a6bff";
-    }
-
-    ctx.fillStyle = col;
+    ctx.fillStyle = fear>0 ? "#2a6bff" : g.c;
     ctx.beginPath();
-    ctx.arc(g.x*TILE+10,g.y*TILE+10,8,0,Math.PI*2);
+    ctx.arc(g.x*T+10,g.y*T+10,8,0,Math.PI*2);
     ctx.fill();
-
-    ctx.fillStyle="#000";
-    ctx.fillText(g.name,g.x*TILE-10,g.y*TILE-10);
   });
 
-  document.getElementById("score").textContent = score;
-  document.getElementById("lives").textContent = lives;
-  document.getElementById("mode").textContent = fear>0 ? "FEAR" : "Normal";
+  document.getElementById("score").textContent=score;
+  document.getElementById("lives").textContent=lives;
+  document.getElementById("mode").textContent=mode.toUpperCase();
 }
 
 /* ===== LOOP ===== */
 function loop(){
+  updateMode();
   movePac();
   ghosts.forEach(moveGhost);
   check();
 
-  if (fear>0) fear--;
+  if(fear>0) fear--;
 
   draw();
 }
 
-setInterval(loop, 140);
+setInterval(loop,140);
 
 /* CONTROLS */
 document.addEventListener("keydown",e=>{
-  if (e.key==="ArrowUp"){pac.dx=0;pac.dy=-1;}
-  if (e.key==="ArrowDown"){pac.dx=0;pac.dy=1;}
-  if (e.key==="ArrowLeft"){pac.dx=-1;pac.dy=0;}
-  if (e.key==="ArrowRight"){pac.dx=1;pac.dy=0;}
+  if(e.key==="ArrowUp"){pac.dx=0;pac.dy=-1;}
+  if(e.key==="ArrowDown"){pac.dx=0;pac.dy=1;}
+  if(e.key==="ArrowLeft"){pac.dx=-1;pac.dy=0;}
+  if(e.key==="ArrowRight"){pac.dx=1;pac.dy=0;}
 });
 
 function restart(){

@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Pac-Man Classic</title>
+<title>Rift Hub - Pac-Man</title>
 
 <style>
 body {
   margin: 0;
-  background: #000;
+  background: #0f0f1a;
   color: white;
   font-family: Arial, sans-serif;
   display: flex;
@@ -17,23 +17,24 @@ body {
 }
 
 #ui {
+  width: 600px;
   display: flex;
   justify-content: space-between;
-  width: 600px;
-  margin: 10px;
+  padding: 10px;
 }
 
 button {
-  background: #222;
+  background: #1a1a2e;
+  border: 1px solid #333;
   color: white;
-  border: 1px solid #444;
-  padding: 6px 12px;
+  padding: 6px 10px;
   cursor: pointer;
+  border-radius: 6px;
 }
 
 canvas {
   background: #000;
-  border: 2px solid #222;
+  border: 2px solid #1a1a2e;
 }
 </style>
 </head>
@@ -41,34 +42,27 @@ canvas {
 <body>
 
 <div id="ui">
-  <button onclick="restartGame()">Restart</button>
-  <button onclick="goBack()">Back</button>
-  <div id="info">Score: 0 | Lives: 3</div>
+  <button onclick="restart()">Restart</button>
+  <button onclick="history.back()">Back</button>
+  <div id="stats">Score: 0 | Lives: 3</div>
 </div>
 
-<canvas id="game" width="600" height="600"></canvas>
+<canvas id="c" width="600" height="600"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
 
 const TILE = 30;
 const ROWS = 20;
 const COLS = 20;
 
-let score, lives, gameOver;
-let pellets = [];
-let powerPellets = [];
+let score, lives;
+let pac, ghosts, pellets, fruits;
 
-let pacman;
-let ghosts;
+let fearTimer = 0;
 
-const DIRS = [
-  {x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}
-];
-
-// ---------- SIMPLE CLASSIC MAZE ----------
-let map = [
+const map = [
 "####################",
 "#........##........#",
 "#.####...##...####.#",
@@ -92,81 +86,92 @@ let map = [
 ];
 
 // ---------- INIT ----------
-function reset() {
+function reset(){
   score = 0;
   lives = 3;
-  gameOver = false;
 
-  pacman = { x: 10, y: 15, dx: 0, dy: 0 };
+  pac = {x:10,y:15,dx:0,dy:0};
 
   ghosts = [
-    {x:9,y:9,color:"red",mode:"chase"},      // Blinky
-    {x:10,y:9,color:"pink",mode:"random"},   // Pinky
-    {x:9,y:10,color:"cyan",mode:"random"},    // Inky
-    {x:10,y:10,color:"orange",mode:"random"}  // Clyde
+    {x:9,y:9,color:"#ff3b3b",type:"chase"},   // Blinky
+    {x:10,y:9,color:"#ff77ff",type:"ambush"}, // Pinky
+    {x:9,y:10,color:"#4de1ff",type:"random"},  // Inky
+    {x:10,y:10,color:"#ffb347",type:"random"}  // Clyde
   ];
 
   pellets = [];
-  powerPellets = [];
+  fruits = [];
 
-  for (let y=0;y<ROWS;y++){
-    for (let x=0;x<COLS;x++){
-      if (map[y][x] === ".") pellets.push({x,y});
-      if (map[y][x] === "." && Math.random()<0.03)
-        powerPellets.push({x,y});
+  for(let y=0;y<ROWS;y++){
+    for(let x=0;x<COLS;x++){
+      if(map[y][x]===".") pellets.push({x,y});
     }
   }
 
-  updateUI();
+  setInterval(spawnFruit, 12000);
+}
+
+// ---------- HELPERS ----------
+function isWall(x,y){
+  return map[y] && map[y][x] === "#";
+}
+
+// WRAP TUNNELS
+function wrap(entity){
+  if(entity.x < 0) entity.x = COLS-1;
+  if(entity.x >= COLS) entity.x = 0;
+}
+
+// ---------- FRUIT ----------
+function spawnFruit(){
+  fruits.push({
+    x: Math.floor(Math.random()*18)+1,
+    y: Math.floor(Math.random()*18)+1,
+    timer: 400
+  });
 }
 
 // ---------- DRAW ----------
-function drawMaze(){
-  for (let y=0;y<ROWS;y++){
-    for (let x=0;x<COLS;x++){
-      if (map[y][x] === "#"){
+function draw(){
+  ctx.clearRect(0,0,600,600);
+
+  // maze
+  for(let y=0;y<ROWS;y++){
+    for(let x=0;x<COLS;x++){
+      if(map[y][x]==="#"){
         ctx.fillStyle = "#111827";
         ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
       }
     }
   }
-}
 
-function drawPellets(){
+  // pellets
   ctx.fillStyle = "#bbb";
   pellets.forEach(p=>{
     ctx.beginPath();
     ctx.arc(p.x*TILE+15,p.y*TILE+15,3,0,Math.PI*2);
     ctx.fill();
   });
-}
 
-function drawPower(){
-  ctx.fillStyle = "#fff";
-  powerPellets.forEach(p=>{
+  // fruit
+  ctx.fillStyle = "#ff4d4d";
+  fruits.forEach(f=>{
     ctx.beginPath();
-    ctx.arc(p.x*TILE+15,p.y*TILE+15,7,0,Math.PI*2);
+    ctx.arc(f.x*TILE+15,f.y*TILE+15,7,0,Math.PI*2);
     ctx.fill();
   });
-}
 
-function drawPacman(){
+  // pacman
   ctx.fillStyle = "yellow";
   ctx.beginPath();
-  ctx.arc(
-    pacman.x*TILE+15,
-    pacman.y*TILE+15,
-    12,
-    0.25*Math.PI,
-    1.75*Math.PI
-  );
-  ctx.lineTo(pacman.x*TILE+15,pacman.y*TILE+15);
+  ctx.arc(pac.x*TILE+15,pac.y*TILE+15,12,0.25*Math.PI,1.75*Math.PI);
+  ctx.lineTo(pac.x*TILE+15,pac.y*TILE+15);
   ctx.fill();
-}
 
-function drawGhosts(){
+  // ghosts
   ghosts.forEach(g=>{
-    ctx.fillStyle = g.frightened ? "#3b82f6" : g.color;
+    ctx.fillStyle = fearTimer>0 ? "#3b82f6" : g.color;
+
     ctx.beginPath();
     ctx.arc(g.x*TILE+15,g.y*TILE+15,12,Math.PI,0);
     ctx.lineTo(g.x*TILE+27,g.y*TILE+27);
@@ -176,64 +181,89 @@ function drawGhosts(){
   });
 }
 
-// ---------- MOVEMENT ----------
-function canMove(x,y){
-  return map[y] && map[y][x] !== "#";
-}
+// ---------- PAC MOVE ----------
+function movePac(){
+  let nx = pac.x + pac.dx;
+  let ny = pac.y + pac.dy;
 
-function movePacman(){
-  const nx = pacman.x + pacman.dx;
-  const ny = pacman.y + pacman.dy;
+  wrap({x:nx}); // visual wrap check
 
-  if (canMove(nx,ny)){
-    pacman.x = nx;
-    pacman.y = ny;
+  if(!isWall(nx,ny)){
+    pac.x = nx;
+    pac.y = ny;
   }
 
   // pellets
   pellets = pellets.filter(p=>{
-    if (p.x===pacman.x && p.y===pacman.y){
+    if(p.x===pac.x && p.y===pac.y){
       score += 10;
       return false;
     }
     return true;
   });
 
-  // power pellets
-  powerPellets = powerPellets.filter(p=>{
-    if (p.x===pacman.x && p.y===pacman.y){
-      score += 50;
-      ghosts.forEach(g=>g.frightened=true);
-      setTimeout(()=>ghosts.forEach(g=>g.frightened=false),6000);
+  // fruit
+  fruits = fruits.filter(f=>{
+    if(f.x===pac.x && f.y===pac.y){
+      score += 100;
       return false;
     }
-    return true;
+    return --f.timer > 0;
   });
 }
 
-function moveGhosts(){
-  ghosts.forEach(g=>{
-    let options = DIRS.filter(d=>canMove(g.x+d.x,g.y+d.y));
-    let move = options[Math.floor(Math.random()*options.length)];
+// ---------- GHOST AI ----------
+function ghostMove(g){
 
-    g.x += move.x;
-    g.y += move.y;
-  });
+  let options = [
+    {x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}
+  ].filter(d=>!isWall(g.x+d.x,g.y+d.y));
+
+  if(options.length===0) return;
+
+  let move;
+
+  if(fearTimer>0){
+    // RUN AWAY
+    move = options[Math.floor(Math.random()*options.length)];
+  }
+  else if(g.type==="chase"){
+    move = options.sort((a,b)=>
+      dist(g.x+a.x,g.y+a.y,pac.x,pac.y) -
+      dist(g.x+b.x,g.y+b.y,pac.x,pac.y)
+    )[0];
+  }
+  else if(g.type==="ambush"){
+    move = options[Math.floor(Math.random()*2)];
+  }
+  else{
+    move = options[Math.floor(Math.random()*options.length)];
+  }
+
+  g.x += move.x;
+  g.y += move.y;
+}
+
+// distance helper
+function dist(x1,y1,x2,y2){
+  return Math.abs(x1-x2)+Math.abs(y1-y2);
 }
 
 // ---------- COLLISION ----------
 function check(){
   ghosts.forEach(g=>{
-    if (g.x===pacman.x && g.y===pacman.y){
-      if (g.frightened){
-        g.x = 9; g.y = 9;
-        score += 200;
+    if(g.x===pac.x && g.y===pac.y){
+
+      if(fearTimer>0){
+        g.x=10; g.y=9;
+        score+=200;
       } else {
         lives--;
-        pacman.x=10; pacman.y=15;
-        if (lives<=0){
-          gameOver=true;
-          alert("Game Over! Score: "+score);
+        pac.x=10; pac.y=15;
+
+        if(lives<=0){
+          alert("Game Over: "+score);
+          restart();
         }
       }
     }
@@ -242,58 +272,40 @@ function check(){
 
 // ---------- INPUT ----------
 document.addEventListener("keydown",e=>{
-  if (e.key==="ArrowRight"){pacman.dx=1;pacman.dy=0;}
-  if (e.key==="ArrowLeft"){pacman.dx=-1;pacman.dy=0;}
-  if (e.key==="ArrowUp"){pacman.dx=0;pacman.dy=-1;}
-  if (e.key==="ArrowDown"){pacman.dx=0;pacman.dy=1;}
+  if(e.key==="ArrowRight"){pac.dx=1;pac.dy=0;}
+  if(e.key==="ArrowLeft"){pac.dx=-1;pac.dy=0;}
+  if(e.key==="ArrowUp"){pac.dx=0;pac.dy=-1;}
+  if(e.key==="ArrowDown"){pac.dx=0;pac.dy=1;}
 });
 
-// ---------- UI ----------
-function updateUI(){
-  document.getElementById("info").innerText =
-    `Score: ${score} | Lives: ${lives}`;
-}
-
-// ---------- LOOP (SLOW TICK STYLE) ----------
-let tick = 0;
+// ---------- LOOP ----------
+let tick=0;
 
 function loop(){
-  if (gameOver) return;
 
-  ctx.clearRect(0,0,600,600);
+  if(fearTimer>0) fearTimer--;
 
-  drawMaze();
-  drawPellets();
-  drawPower();
-  drawPacman();
-  drawGhosts();
+  draw();
 
-  if (tick % 10 === 0){
-    movePacman();
-    moveGhosts();
+  if(tick%8===0){ // SLOW LIKE REAL PACMAN
+    movePac();
+    ghosts.forEach(ghostMove);
     check();
-    updateUI();
   }
 
   tick++;
   requestAnimationFrame(loop);
 }
 
-// ---------- BUTTONS ----------
-function restartGame(){
+// ---------- UI ----------
+function restart(){
   reset();
   loop();
 }
 
-function goBack(){
-  window.history.back();
-}
-
-// start
 reset();
 loop();
 
 </script>
-
 </body>
 </html>

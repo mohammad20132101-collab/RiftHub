@@ -3,24 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pac-Man Mini Game</title>
-<style>
-  body {
-    margin: 0;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
+<title>Rift Hub - Pac-Man</title>
 
-  canvas {
-    border: 3px solid #1e90ff;
-    background: #000;
-  }
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f1a;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  width: 100%;
+  background: #1a1a2e;
+  padding: 15px;
+  text-align: center;
+}
+
+button {
+  padding: 8px 12px;
+  margin: 5px;
+  border: none;
+  border-radius: 6px;
+  background: #4c6fff;
+  color: white;
+  cursor: pointer;
+}
+
+canvas {
+  border: 3px solid #4c6fff;
+  background: black;
+  margin-top: 20px;
+}
+
+#ui {
+  margin-top: 10px;
+  text-align: center;
+}
+
+#score {
+  font-size: 18px;
+  margin: 5px;
+}
 </style>
 </head>
+
 <body>
+
+<header>
+  <h2>🎮 Rift Hub - Pac-Man</h2>
+  <button onclick="goBack()">🔙 Back</button>
+  <button onclick="restartGame()">🔄 Restart</button>
+</header>
+
+<div id="ui">
+  <div id="score">Score: 0</div>
+</div>
 
 <canvas id="game" width="600" height="600"></canvas>
 
@@ -32,46 +73,42 @@ const tileSize = 30;
 const rows = 20;
 const cols = 20;
 
-const map = Array(rows).fill().map(() => Array(cols).fill(0));
-
-// Border walls
-for (let r = 0; r < rows; r++) {
-  map[r][0] = 1;
-  map[r][cols - 1] = 1;
-}
-for (let c = 0; c < cols; c++) {
-  map[0][c] = 1;
-  map[rows - 1][c] = 1;
-}
-
-// Random inner walls
-for (let i = 0; i < 50; i++) {
-  map[Math.floor(Math.random() * rows)]
-     [Math.floor(Math.random() * cols)] = 1;
-}
-
-let pacman = {
-  x: 1,
-  y: 1,
-  dirX: 1,
-  dirY: 0,
-  mouth: 0
-};
-
-let ghost = {
-  x: cols - 2,
-  y: rows - 2
-};
-
 let score = 0;
-let pellets = [];
+let gameOver = false;
 
-for (let y = 1; y < rows - 1; y++) {
-  for (let x = 1; x < cols - 1; x++) {
-    if (map[y][x] === 0) {
-      pellets.push({ x, y });
+let map, pacman, ghost, pellets;
+
+function initGame() {
+  score = 0;
+  gameOver = false;
+
+  map = Array(rows).fill().map(() => Array(cols).fill(0));
+
+  for (let r = 0; r < rows; r++) {
+    map[r][0] = 1;
+    map[r][cols - 1] = 1;
+  }
+  for (let c = 0; c < cols; c++) {
+    map[0][c] = 1;
+    map[rows - 1][c] = 1;
+  }
+
+  for (let i = 0; i < 40; i++) {
+    map[Math.floor(Math.random() * rows)][Math.floor(Math.random() * cols)] = 1;
+  }
+
+  pacman = { x: 1, y: 1, dx: 1, dy: 0, mouth: 0 };
+
+  ghost = { x: cols - 2, y: rows - 2 };
+
+  pellets = [];
+  for (let y = 1; y < rows - 1; y++) {
+    for (let x = 1; x < cols - 1; x++) {
+      if (map[y][x] === 0) pellets.push({ x, y });
     }
   }
+
+  document.getElementById("score").innerText = "Score: 0";
 }
 
 function drawMap() {
@@ -79,19 +116,14 @@ function drawMap() {
     for (let x = 0; x < cols; x++) {
       if (map[y][x] === 1) {
         ctx.fillStyle = "#0044ff";
-        ctx.fillRect(
-          x * tileSize,
-          y * tileSize,
-          tileSize,
-          tileSize
-        );
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
       }
     }
   }
 }
 
 function drawPellets() {
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = "white";
   pellets.forEach(p => {
     ctx.beginPath();
     ctx.arc(
@@ -109,26 +141,19 @@ function drawPacman() {
   const cx = pacman.x * tileSize + tileSize / 2;
   const cy = pacman.y * tileSize + tileSize / 2;
 
-  pacman.mouth += 0.15;
-
-  const mouthOpen = Math.abs(Math.sin(pacman.mouth)) * 0.4;
+  pacman.mouth += 0.2;
+  const open = Math.abs(Math.sin(pacman.mouth)) * 0.4;
 
   let angle = 0;
-  if (pacman.dirX === 1) angle = 0;
-  if (pacman.dirX === -1) angle = Math.PI;
-  if (pacman.dirY === 1) angle = Math.PI / 2;
-  if (pacman.dirY === -1) angle = -Math.PI / 2;
+  if (pacman.dx === 1) angle = 0;
+  if (pacman.dx === -1) angle = Math.PI;
+  if (pacman.dy === 1) angle = Math.PI / 2;
+  if (pacman.dy === -1) angle = -Math.PI / 2;
 
   ctx.fillStyle = "yellow";
   ctx.beginPath();
   ctx.moveTo(cx, cy);
-  ctx.arc(
-    cx,
-    cy,
-    tileSize / 2 - 2,
-    angle + mouthOpen,
-    angle + Math.PI * 2 - mouthOpen
-  );
+  ctx.arc(cx, cy, tileSize / 2 - 2, angle + open, angle + Math.PI * 2 - open);
   ctx.fill();
 }
 
@@ -139,24 +164,17 @@ function drawGhost() {
     ghost.x * tileSize + tileSize / 2,
     ghost.y * tileSize + tileSize / 2,
     tileSize / 2 - 2,
-    Math.PI,
-    0
+    0,
+    Math.PI * 2
   );
-  ctx.lineTo(
-    ghost.x * tileSize + tileSize - 2,
-    ghost.y * tileSize + tileSize - 2
-  );
-  ctx.lineTo(
-    ghost.x * tileSize + 2,
-    ghost.y * tileSize + tileSize - 2
-  );
-  ctx.closePath();
   ctx.fill();
 }
 
 function movePacman() {
-  const nx = pacman.x + pacman.dirX;
-  const ny = pacman.y + pacman.dirY;
+  if (gameOver) return;
+
+  let nx = pacman.x + pacman.dx;
+  let ny = pacman.y + pacman.dy;
 
   if (map[ny]?.[nx] !== 1) {
     pacman.x = nx;
@@ -166,6 +184,7 @@ function movePacman() {
   pellets = pellets.filter(p => {
     if (p.x === pacman.x && p.y === pacman.y) {
       score++;
+      document.getElementById("score").innerText = "Score: " + score;
       return false;
     }
     return true;
@@ -173,14 +192,11 @@ function movePacman() {
 }
 
 function moveGhost() {
-  const dirs = [
-    [1,0],[-1,0],[0,1],[0,-1]
-  ];
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
 
-  const move = dirs[Math.floor(Math.random() * dirs.length)];
-
-  const nx = ghost.x + move[0];
-  const ny = ghost.y + move[1];
+  let nx = ghost.x + dx;
+  let ny = ghost.y + dy;
 
   if (map[ny]?.[nx] !== 1) {
     ghost.x = nx;
@@ -188,57 +204,51 @@ function moveGhost() {
   }
 }
 
-function checkCollision() {
+function checkGameOver() {
   if (pacman.x === ghost.x && pacman.y === ghost.y) {
-    alert("Game Over! Score: " + score);
-    location.reload();
+    gameOver = true;
+    setTimeout(() => {
+      alert("Game Over! Score: " + score);
+    }, 50);
   }
 }
 
 document.addEventListener("keydown", e => {
-  if (e.key === "ArrowRight") {
-    pacman.dirX = 1;
-    pacman.dirY = 0;
-  }
-  if (e.key === "ArrowLeft") {
-    pacman.dirX = -1;
-    pacman.dirY = 0;
-  }
-  if (e.key === "ArrowUp") {
-    pacman.dirX = 0;
-    pacman.dirY = -1;
-  }
-  if (e.key === "ArrowDown") {
-    pacman.dirX = 0;
-    pacman.dirY = 1;
-  }
+  if (e.key === "ArrowRight") { pacman.dx = 1; pacman.dy = 0; }
+  if (e.key === "ArrowLeft") { pacman.dx = -1; pacman.dy = 0; }
+  if (e.key === "ArrowUp") { pacman.dx = 0; pacman.dy = -1; }
+  if (e.key === "ArrowDown") { pacman.dx = 0; pacman.dy = 1; }
 });
 
-function gameLoop() {
+function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   drawMap();
   drawPellets();
-
-  movePacman();
-
-  if (Math.random() < 0.2) {
-    moveGhost();
-  }
-
   drawPacman();
   drawGhost();
 
-  checkCollision();
+  movePacman();
 
-  ctx.fillStyle = "#fff";
-  ctx.font = "20px Arial";
-  ctx.fillText("Score: " + score, 10, 25);
+  if (Math.random() < 0.2) moveGhost();
 
-  requestAnimationFrame(gameLoop);
+  checkGameOver();
+
+  requestAnimationFrame(loop);
 }
 
-gameLoop();
+/* BUTTONS */
+function restartGame() {
+  initGame();
+}
+
+function goBack() {
+  window.location.href = "index.html";
+}
+
+/* START */
+initGame();
+loop();
 </script>
 
 </body>

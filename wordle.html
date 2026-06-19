@@ -1,1 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Rift Word</title>
+<style>
+body {
+    background: #CCFF00;
+    color: #000080;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
 
+h1 {
+    margin-top: 20px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(5, 60px);
+    gap: 5px;
+    justify-content: center;
+    margin: 20px auto;
+}
+
+.tile {
+    width: 60px;
+    height: 60px;
+    border: 2px solid #000080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: bold;
+    background: white;
+}
+
+.correct {
+    background: #4CAF50;
+    color: white;
+}
+
+.present {
+    background: #FFC107;
+    color: black;
+}
+
+.absent {
+    background: #777;
+    color: white;
+}
+
+input {
+    padding: 10px;
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 18px;
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+#message {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>Rift Word</h1>
+
+<div id="board"></div>
+
+<input id="guessInput" maxlength="5" placeholder="Guess">
+<button onclick="submitGuess()">Guess</button>
+
+<div id="message"></div>
+
+<script>
+const words = [
+"ABOUT","ABOVE","ABUSE","ACTOR","ADULT","AFTER","AGAIN","AGENT","AGREE","AHEAD",
+"ALARM","ALBUM","ALERT","ALIEN","ALIVE","ALLOW","ALONE","ALONG","ALTER","AMONG",
+"ANGEL","ANGER","APPLE","APPLY","ARENA","ARGUE","ARISE","ARMOR","ARROW","ASIDE",
+"AUDIO","AVOID","AWARD","AWARE","BADGE","BAKER","BASIC","BEACH","BEGAN","BEGIN",
+"BEING","BELLY","BENCH","BIRTH","BLACK","BLAME","BLAST","BLEND","BLOCK","BLOOD",
+"BOARD","BOOST","BOOTH","BOUND","BRAIN","BRAKE","BRAND","BRAVE","BREAD","BREAK",
+"BRICK","BRIEF","BRING","BROAD","BROKE","BROWN","BUILD","BURST","BUYER","CABLE",
+"CANDY","CARRY","CATCH","CAUSE","CHAIN","CHAIR","CHART","CHASE","CHEAP","CHECK",
+"CHEST","CHIEF","CHILD","CHINA","CHOSE","CIVIL","CLAIM","CLASS","CLEAN","CLEAR",
+"CLIMB","CLOCK","CLOSE","CLOUD","COACH","COAST","COULD","COUNT","COURT","COVER",
+"CRAZY","CREAM","CRIME","CROSS","CROWD","CROWN","CURVE","CYCLE","DAILY","DANCE",
+"DATED","DEALT","DEATH","DEBUT","DELAY","DEPTH","DOING","DOUBT","DOZEN","DRAFT",
+"DRAMA","DRAWN","DREAM","DRESS","DRINK","DRIVE","EARLY","EARTH","EIGHT","ELITE",
+"EMPTY","ENEMY","ENJOY","ENTER","ENTRY","EQUAL","ERROR","EVENT","EVERY","EXACT",
+"EXIST","EXTRA","FAITH","FALSE","FAULT","FIBER","FIELD","FIFTH","FIFTY","FIGHT",
+"FINAL","FIRST","FLAME","FLASH","FLEET","FLOOR","FOCUS","FORCE","FORTH","FORTY",
+"FOUND","FRAME","FRANK","FRESH","FRONT","FRUIT","FULLY","FUNNY","GIANT","GLASS",
+"GLOBE","GOING","GRACE","GRADE","GRAND","GRANT","GRASS","GREAT","GREEN","GROUP",
+"GROWN","GUARD","GUESS","GUEST","GUIDE","HAPPY","HEART","HEAVY","HORSE","HOTEL",
+"HOUSE","HUMAN","IDEAL","IMAGE","INDEX","INNER","INPUT","ISSUE","JELLY","JOINT",
+"JUDGE","JUICE","KNIFE","KNOWN","LABEL","LARGE","LASER","LATER","LAUGH","LAYER",
+"LEARN","LEASE","LEAST","LEAVE","LEGAL","LEVEL","LIGHT","LIMIT","LOCAL","LOGIC",
+"LOOSE","LUCKY","LUNCH","MAGIC","MAJOR","MAKER","MARCH","MATCH","MAYBE","METAL",
+"MIGHT","MINOR","MODEL","MONEY","MONTH","MORAL","MOTOR","MOUSE","MOUTH","MOVIE",
+"MUSIC","NEEDS","NEVER","NIGHT","NOISE","NORTH","NOVEL","NURSE","OCEAN","OFFER",
+"OFTEN","ORDER","OTHER","OWNER","PAINT","PANEL","PAPER","PARTY","PEACE","PHONE",
+"PHOTO","PIANO","PIECE","PILOT","PITCH","PLACE","PLAIN","PLANE","PLANT","PLATE",
+"POINT","POWER","PRESS","PRICE","PRIDE","PRIME","PRINT","PRIZE","PROOF","PROUD",
+"QUEEN","QUEST","QUICK","QUIET","RADIO","RAISE","RANGE","RAPID","REACH","READY",
+"RIGHT","RIVER","ROBOT","ROUGH","ROUND","ROUTE","ROYAL","RURAL","SCALE","SCENE",
+"SCOPE","SCORE","SENSE","SERVE","SEVEN","SHADE","SHAKE","SHALL","SHAPE","SHARE",
+"SHARP","SHEET","SHELF","SHIFT","SHINE","SHIRT","SHOCK","SHOOT","SHORT","SHOWN",
+"SIGHT","SINCE","SKILL","SLEEP","SLIDE","SMALL","SMART","SMILE","SMOKE","SOLID",
+"SOLVE","SOUND","SOUTH","SPACE","SPEAK","SPEED","SPEND","SPENT","SPICE","SPLIT",
+"SPOKE","SPORT","STAFF","STAGE","STAKE","STAND","START","STATE","STEAM","STEEL",
+"STICK","STILL","STOCK","STONE","STORE","STORM","STORY","STRIP","STUDY","STUFF",
+"STYLE","SUGAR","SUPER","SWEET","TABLE","TAKEN","TASTE","TEACH","THANK","THEME",
+"THERE","THICK","THING","THINK","THIRD","THOSE","THREE","THROW","TIGER","TITLE",
+"TODAY","TOPIC","TOTAL","TOUCH","TOUGH","TOWER","TRACK","TRADE","TRAIN","TREAT",
+"TREND","TRIAL","TRUCK","TRULY","TRUST","TRUTH","TWICE","UNDER","UNION","UNITY",
+"UPPER","URBAN","USAGE","VALUE","VIDEO","VISIT","VOICE","WASTE","WATCH","WATER",
+"WHEEL","WHERE","WHILE","WHITE","WHOLE","WORLD","WORRY","WORTH","WRITE","WRONG",
+"YOUTH","ZEBRA"
+];
+
+const answer = words[Math.floor(Math.random() * words.length)];
+
+const board = document.getElementById("board");
+const message = document.getElementById("message");
+
+let row = 0;
+const maxRows = 6;
+
+for(let i = 0; i < 30; i++) {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    board.appendChild(tile);
+}
+
+function submitGuess() {
+    const input = document.getElementById("guessInput");
+    const guess = input.value.toUpperCase();
+
+    if (guess.length !== 5) {
+        message.textContent = "Enter 5 letters!";
+        return;
+    }
+
+    const tiles = document.querySelectorAll(".tile");
+
+    for(let i = 0; i < 5; i++) {
+        const tile = tiles[row * 5 + i];
+        tile.textContent = guess[i];
+
+        if (guess[i] === answer[i]) {
+            tile.classList.add("correct");
+        } else if (answer.includes(guess[i])) {
+            tile.classList.add("present");
+        } else {
+            tile.classList.add("absent");
+        }
+    }
+
+    if (guess === answer) {
+        message.textContent = "You Win!";
+        disableGame();
+        return;
+    }
+
+    row++;
+
+    if (row >= maxRows) {
+        message.textContent = "You Lose! Word: " + answer;
+        disableGame();
+    }
+
+    input.value = "";
+}
+
+function disableGame() {
+    document.getElementById("guessInput").disabled = true;
+}
+</script>
+
+</body>
+</html>

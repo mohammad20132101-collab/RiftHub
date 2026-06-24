@@ -1,1 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rift 2048</title>
 
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#0f0f1a;
+    color:white;
+    text-align:center;
+}
+
+h1{
+    color:#4c6fff;
+}
+
+/* GAME BOARD */
+#game{
+    display:grid;
+    grid-template-columns:repeat(4,90px);
+    gap:10px;
+    justify-content:center;
+    margin-top:20px;
+    background:#141428;
+    padding:15px;
+    border-radius:15px;
+    border:3px solid #4c6fff;
+    box-shadow:0 0 20px #4c6fff55;
+}
+
+/* TILE */
+.tile{
+    width:90px;
+    height:90px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    font-size:20px;
+    transition:0.12s;
+}
+
+/* pop effect */
+.pop{
+    animation:pop 0.15s ease;
+}
+
+@keyframes pop{
+    0%{transform:scale(0.7);}
+    60%{transform:scale(1.2);}
+    100%{transform:scale(1);}
+}
+
+button{
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:#4c6fff;
+    color:white;
+    margin:5px;
+}
+button:hover{
+    background:#9b5cff;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🌀 Rift 2048</h1>
+
+<button onclick="restart()">Restart</button>
+<button onclick="undo()">Undo</button>
+<button onclick="window.location.href='index.html'">Back</button>
+<div id="game"></div>
+
+<script>
+
+let board;
+let history=[];
+
+// INIT
+function init(){
+    board = Array(4).fill().map(()=>Array(4).fill(0));
+    addTile();
+    addTile();
+    draw();
+}
+
+// SPAWN
+function addTile(){
+    let empty=[];
+    for(let r=0;r<4;r++){
+        for(let c=0;c<4;c++){
+            if(board[r][c]===0) empty.push({r,c});
+        }
+    }
+
+    if(!empty.length) return;
+
+    let spot = empty[Math.floor(Math.random()*empty.length)];
+    board[spot.r][spot.c] = Math.random()<0.9 ? 2 : 4;
+}
+
+// 🌈 UNIQUE RIFT COLOR SYSTEM PER NUMBER
+function color(val){
+
+    const map = {
+        2:"#1a1a2e",
+        4:"#16213e",
+        8:"#0f3460",
+        16:"#1f6feb",
+        32:"#4c6fff",
+        64:"#6a5cff",
+        128:"#8a4dff",
+        256:"#a855ff",
+        512:"#c084ff",
+        1024:"#00c2ff",
+        2048:"#ffffff"
+    };
+
+    return map[val] || "#0f0f1a";
+}
+
+// DRAW
+function draw(){
+
+    const game = document.getElementById("game");
+    game.innerHTML="";
+
+    for(let r=0;r<4;r++){
+        for(let c=0;c<4;c++){
+
+            let val = board[r][c];
+
+            let tile = document.createElement("div");
+            tile.className="tile";
+            tile.textContent = val ? val : "";
+
+            tile.style.background = color(val);
+
+            // text contrast
+            tile.style.color = (val>=128) ? "#000" : "#fff";
+
+            // glow for high values
+            if(val>=32){
+                tile.style.boxShadow = "0 0 12px rgba(76,108,255,0.5)";
+            }
+
+            game.appendChild(tile);
+        }
+    }
+}
+
+// SLIDE LOGIC
+function slide(row){
+
+    row = row.filter(x=>x!==0);
+
+    for(let i=0;i<row.length-1;i++){
+        if(row[i]===row[i+1]){
+            row[i]*=2;
+            row[i+1]=0;
+        }
+    }
+
+    row = row.filter(x=>x!==0);
+
+    while(row.length<4) row.push(0);
+
+    return row;
+}
+
+// MOVES
+function moveLeft(){
+    for(let r=0;r<4;r++) board[r]=slide(board[r]);
+}
+
+function moveRight(){
+    for(let r=0;r<4;r++) board[r]=slide(board[r].reverse()).reverse();
+}
+
+function moveUp(){
+    for(let c=0;c<4;c++){
+        let col=[];
+        for(let r=0;r<4;r++) col.push(board[r][c]);
+        col=slide(col);
+        for(let r=0;r<4;r++) board[r][c]=col[r];
+    }
+}
+
+function moveDown(){
+    for(let c=0;c<4;c++){
+        let col=[];
+        for(let r=0;r<4;r++) col.push(board[r][c]);
+        col=slide(col.reverse()).reverse();
+        for(let r=0;r<4;r++) board[r][c]=col[r];
+    }
+}
+
+// INPUT
+document.addEventListener("keydown", e=>{
+
+    let before = JSON.stringify(board);
+    history.push(before);
+
+    if(e.key==="ArrowLeft") moveLeft();
+    if(e.key==="ArrowRight") moveRight();
+    if(e.key==="ArrowUp") moveUp();
+    if(e.key==="ArrowDown") moveDown();
+
+    let after = JSON.stringify(board);
+
+    if(before!==after){
+        addTile();
+        draw();
+        popFX();
+    }
+});
+
+// FX
+function popFX(){
+    document.querySelectorAll(".tile").forEach(t=>{
+        if(t.textContent!==""){
+            t.classList.add("pop");
+            setTimeout(()=>t.classList.remove("pop"),150);
+        }
+    });
+}
+
+// UNDO
+function undo(){
+    if(history.length===0) return;
+    board = JSON.parse(history.pop());
+    draw();
+}
+
+// RESTART
+function restart(){
+    history=[];
+    init();
+}
+
+init();
+
+</script>
+
+</body>
+</html>

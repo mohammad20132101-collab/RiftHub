@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rift 2048</title>
+<title>Rift Connect 4</title>
 
 <style>
 body{
@@ -14,15 +14,67 @@ body{
     text-align:center;
 }
 
+/* ===== START MENU ===== */
+#menu{
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:#0f0f1a;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    z-index:10;
+}
+
+.menuBox{
+    background:#141428;
+    padding:30px;
+    border-radius:15px;
+    border:3px solid #4c6fff;
+    box-shadow:0 0 25px #4c6fff55;
+}
+
+.menuBox h1{
+    color:#4c6fff;
+    margin-bottom:10px;
+}
+
+.menuBox button{
+    margin:8px;
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
+
+#blueBtn{
+    background:#4c6fff;
+    color:white;
+    box-shadow:0 0 15px #4c6fff55;
+}
+
+#purpleBtn{
+    background:#9b5cff;
+    color:white;
+    box-shadow:0 0 15px #9b5cff55;
+}
+
+/* ===== GAME ===== */
+#gameArea{
+    display:none;
+}
+
 h1{
     color:#4c6fff;
 }
 
-/* GAME BOARD */
-#game{
+/* BOARD */
+#board{
     display:grid;
-    grid-template-columns:repeat(4,90px);
-    gap:10px;
+    grid-template-columns:repeat(7,80px);
+    gap:8px;
     justify-content:center;
     margin-top:20px;
     background:#141428;
@@ -32,28 +84,35 @@ h1{
     box-shadow:0 0 20px #4c6fff55;
 }
 
-/* TILE */
-.tile{
-    width:90px;
-    height:90px;
-    border-radius:12px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:bold;
-    font-size:20px;
-    transition:0.12s;
+/* CELLS */
+.cell{
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    background:#0f0f1a;
+    cursor:pointer;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.7);
 }
 
-/* pop effect */
-.pop{
-    animation:pop 0.15s ease;
+/* PIECES */
+.player1{
+    background:#4c6fff;
+    box-shadow:0 0 15px #4c6fff;
 }
 
-@keyframes pop{
-    0%{transform:scale(0.7);}
-    60%{transform:scale(1.2);}
-    100%{transform:scale(1);}
+.player2{
+    background:#9b5cff;
+    box-shadow:0 0 15px #9b5cff;
+}
+
+/* drop animation */
+.drop{
+    animation:drop 0.2s ease;
+}
+
+@keyframes drop{
+    from{transform:translateY(-200px);}
+    to{transform:translateY(0);}
 }
 
 button{
@@ -73,181 +132,194 @@ button:hover{
 
 <body>
 
-<h1>🌀 Rift 2048</h1>
+<!-- ===== MENU ===== -->
+<div id="menu">
+    <div class="menuBox">
+        <h1>🌀 Rift Connect 4</h1>
+        <p>Choose your Rift alignment</p>
+        <button id="blueBtn" onclick="startGame('player1')">Rift Blue</button>
+        <button id="purpleBtn" onclick="startGame('player2')">Rift Purple</button>
+    </div>
+</div>
 
-<button onclick="restart()">Restart</button>
-<button onclick="undo()">Undo</button>
-<button onclick="window.location.href='index.html'">Back</button>
-<div id="game"></div>
+<!-- ===== GAME ===== -->
+<div id="gameArea">
+
+<h1>Rift Connect 4</h1>
+
+<div id="board"></div>
+
+<p id="status">Blue’s turn</p>
+
+<button onclick="resetGame()">Reset</button>
+
+</div>
 
 <script>
 
-let board;
-let history=[];
+const ROWS = 6;
+const COLS = 7;
 
-// INIT
-function init(){
-    board = Array(4).fill().map(()=>Array(4).fill(0));
-    addTile();
-    addTile();
-    draw();
+let board = [];
+let currentPlayer = "player1";
+let human = "player1";
+let ai = "player2";
+let gameOver = false;
+
+const boardEl = document.getElementById("board");
+const statusEl = document.getElementById("status");
+
+/* ===== START GAME ===== */
+function startGame(choice){
+
+    human = choice;
+    ai = (choice === "player1") ? "player2" : "player1";
+    currentPlayer = "player1";
+
+    document.getElementById("menu").style.display="none";
+    document.getElementById("gameArea").style.display="block";
+
+    initBoard();
 }
 
-// SPAWN
-function addTile(){
-    let empty=[];
-    for(let r=0;r<4;r++){
-        for(let c=0;c<4;c++){
-            if(board[r][c]===0) empty.push({r,c});
-        }
-    }
-
-    if(!empty.length) return;
-
-    let spot = empty[Math.floor(Math.random()*empty.length)];
-    board[spot.r][spot.c] = Math.random()<0.9 ? 2 : 4;
+/* ===== INIT BOARD ===== */
+function initBoard(){
+    board = Array.from({length:ROWS},()=>Array(COLS).fill(null));
+    drawBoard();
 }
 
-// 🌈 UNIQUE RIFT COLOR SYSTEM PER NUMBER
-function color(val){
+/* ===== DRAW BOARD ===== */
+function drawBoard(){
 
-    const map = {
-        2:"#1a1a2e",
-        4:"#16213e",
-        8:"#0f3460",
-        16:"#1f6feb",
-        32:"#4c6fff",
-        64:"#6a5cff",
-        128:"#8a4dff",
-        256:"#a855ff",
-        512:"#c084ff",
-        1024:"#00c2ff",
-        2048:"#ffffff"
-    };
+    boardEl.innerHTML="";
 
-    return map[val] || "#0f0f1a";
-}
+    for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
 
-// DRAW
-function draw(){
+            let cell = document.createElement("div");
+            cell.classList.add("cell");
 
-    const game = document.getElementById("game");
-    game.innerHTML="";
+            cell.dataset.col = c;
 
-    for(let r=0;r<4;r++){
-        for(let c=0;c<4;c++){
-
-            let val = board[r][c];
-
-            let tile = document.createElement("div");
-            tile.className="tile";
-            tile.textContent = val ? val : "";
-
-            tile.style.background = color(val);
-
-            // text contrast
-            tile.style.color = (val>=128) ? "#000" : "#fff";
-
-            // glow for high values
-            if(val>=32){
-                tile.style.boxShadow = "0 0 12px rgba(76,108,255,0.5)";
+            if(board[r][c]){
+                cell.classList.add(board[r][c]);
+                cell.classList.add("drop");
             }
 
-            game.appendChild(tile);
+            cell.onclick = ()=>play(c);
+
+            boardEl.appendChild(cell);
         }
     }
 }
 
-// SLIDE LOGIC
-function slide(row){
+/* ===== PLAY MOVE ===== */
+function play(col){
 
-    row = row.filter(x=>x!==0);
+    if(gameOver) return;
+    if(currentPlayer !== human) return;
 
-    for(let i=0;i<row.length-1;i++){
-        if(row[i]===row[i+1]){
-            row[i]*=2;
-            row[i+1]=0;
+    for(let r=ROWS-1;r>=0;r--){
+        if(!board[r][col]){
+            board[r][col]=currentPlayer;
+            break;
         }
     }
 
-    row = row.filter(x=>x!==0);
+    drawBoard();
 
-    while(row.length<4) row.push(0);
-
-    return row;
-}
-
-// MOVES
-function moveLeft(){
-    for(let r=0;r<4;r++) board[r]=slide(board[r]);
-}
-
-function moveRight(){
-    for(let r=0;r<4;r++) board[r]=slide(board[r].reverse()).reverse();
-}
-
-function moveUp(){
-    for(let c=0;c<4;c++){
-        let col=[];
-        for(let r=0;r<4;r++) col.push(board[r][c]);
-        col=slide(col);
-        for(let r=0;r<4;r++) board[r][c]=col[r];
+    if(checkWin(currentPlayer)){
+        statusEl.textContent = currentPlayer + " wins!";
+        gameOver=true;
+        return;
     }
+
+    currentPlayer = ai;
+    statusEl.textContent = "Purple thinking...";
+
+    setTimeout(aiMove,400);
 }
 
-function moveDown(){
-    for(let c=0;c<4;c++){
-        let col=[];
-        for(let r=0;r<4;r++) col.push(board[r][c]);
-        col=slide(col.reverse()).reverse();
-        for(let r=0;r<4;r++) board[r][c]=col[r];
-    }
-}
+/* ===== AI ===== */
+function aiMove(){
 
-// INPUT
-document.addEventListener("keydown", e=>{
+    if(gameOver) return;
 
-    let before = JSON.stringify(board);
-    history.push(before);
+    let col;
 
-    if(e.key==="ArrowLeft") moveLeft();
-    if(e.key==="ArrowRight") moveRight();
-    if(e.key==="ArrowUp") moveUp();
-    if(e.key==="ArrowDown") moveDown();
+    do{
+        col = Math.floor(Math.random()*COLS);
+    } while(board[0][col] !== null);
 
-    let after = JSON.stringify(board);
-
-    if(before!==after){
-        addTile();
-        draw();
-        popFX();
-    }
-});
-
-// FX
-function popFX(){
-    document.querySelectorAll(".tile").forEach(t=>{
-        if(t.textContent!==""){
-            t.classList.add("pop");
-            setTimeout(()=>t.classList.remove("pop"),150);
+    for(let r=ROWS-1;r>=0;r--){
+        if(!board[r][col]){
+            board[r][col]=ai;
+            break;
         }
-    });
+    }
+
+    drawBoard();
+
+    if(checkWin(ai)){
+        statusEl.textContent = ai + " wins!";
+        gameOver=true;
+        return;
+    }
+
+    currentPlayer = human;
+    statusEl.textContent = "Your turn";
 }
 
-// UNDO
-function undo(){
-    if(history.length===0) return;
-    board = JSON.parse(history.pop());
-    draw();
+/* ===== WIN CHECK ===== */
+function checkWin(p){
+
+    for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
+
+            if(
+                c+3<COLS &&
+                board[r][c]==p &&
+                board[r][c+1]==p &&
+                board[r][c+2]==p &&
+                board[r][c+3]==p
+            ) return true;
+
+            if(
+                r+3<ROWS &&
+                board[r][c]==p &&
+                board[r+1][c]==p &&
+                board[r+2][c]==p &&
+                board[r+3][c]==p
+            ) return true;
+
+            if(
+                r+3<ROWS && c+3<COLS &&
+                board[r][c]==p &&
+                board[r+1][c+1]==p &&
+                board[r+2][c+2]==p &&
+                board[r+3][c+3]==p
+            ) return true;
+
+            if(
+                r-3>=0 && c+3<COLS &&
+                board[r][c]==p &&
+                board[r-1][c+1]==p &&
+                board[r-2][c+2]==p &&
+                board[r-3][c+3]==p
+            ) return true;
+        }
+    }
+
+    return false;
 }
 
-// RESTART
-function restart(){
-    history=[];
-    init();
+/* ===== RESET ===== */
+function resetGame(){
+    gameOver=false;
+    currentPlayer="player1";
+    initBoard();
+    statusEl.textContent="Blue’s turn";
 }
-
-init();
 
 </script>
 

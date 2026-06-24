@@ -220,15 +220,87 @@ function drop(col){
 function aiMove(){
     if(gameOver) return;
 
-    let valid=[];
+    let valid = [];
     for(let c=0;c<COLS;c++){
         if(board[0][c]===null) valid.push(c);
     }
 
-    let col = valid[Math.floor(Math.random()*valid.length)];
-    drop(col);
+    // helper: simulate move safely
+   function testMove(col, player){
+    let r = getRow(col);
+    if(r === -1) return false;
+
+    board[r][col] = player;
+
+    // check win WITHOUT affecting winningCells
+    let win = false;
+
+    const dirs = [
+        [[1,0],[-1,0]],
+        [[0,1],[0,-1]],
+        [[1,1],[-1,-1]],
+        [[1,-1],[-1,1]]
+    ];
+
+    for(let d of dirs){
+        let line = [{r,c:col}];
+
+        for(let [dr,dc] of d){
+            let rr=r+dr, cc=col+dc;
+
+            while(rr>=0 && rr<ROWS && cc>=0 && cc<COLS && board[rr][cc]===player){
+                line.push({r:rr,c:cc});
+                rr+=dr;
+                cc+=dc;
+            }
+        }
+
+        if(line.length >= 4){
+            win = true;
+            break;
+        }
+    }
+
+    board[r][col] = null;
+    return win;
 }
 
+    // 1️⃣ WIN if possible
+    for(let c of valid){
+        if(testMove(c, "player2")){
+            drop(c);
+            return;
+        }
+    }
+
+    // 2️⃣ BLOCK player
+    for(let c of valid){
+        if(testMove(c, "player1")){
+            drop(c);
+            return;
+        }
+    }
+
+    // 3️⃣ center priority
+    let priority = [3,2,4,1,5,0,6];
+    for(let c of priority){
+        if(valid.includes(c)){
+            drop(c);
+            return;
+        }
+    }
+
+    // fallback
+    drop(valid[Math.floor(Math.random()*valid.length)]);
+}
+
+// helper: find row for column
+function getRow(col){
+    for(let r=ROWS-1;r>=0;r--){
+        if(!board[r][col]) return r;
+    }
+    return -1;
+}
 /* RENDER */
 function render(){
     const cells = document.querySelectorAll(".cell");

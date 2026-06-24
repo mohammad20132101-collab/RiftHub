@@ -1,1 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rift 2048</title>
 
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#0f0f1a;
+    color:white;
+    text-align:center;
+}
+
+/* ===== MENU SCREEN ===== */
+#menu{
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:#0f0f1a;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    z-index:10;
+}
+
+.menuBox{
+    background:#141428;
+    padding:30px;
+    border-radius:15px;
+    border:3px solid #4c6fff;
+    box-shadow:0 0 25px #4c6fff55;
+}
+
+.menuBox h1{
+    color:#4c6fff;
+    margin-bottom:10px;
+}
+
+.menuBox button{
+    margin-top:15px;
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    background:#4c6fff;
+    color:white;
+    box-shadow:0 0 15px #4c6fff55;
+}
+
+.menuBox button:hover{
+    background:#9b5cff;
+    box-shadow:0 0 15px #9b5cff55;
+}
+
+/* ===== GAME ===== */
+#gameArea{
+    display:none;
+}
+
+h1{
+    color:#4c6fff;
+}
+
+#game{
+    display:grid;
+    grid-template-columns:repeat(4,90px);
+    gap:10px;
+    justify-content:center;
+    margin-top:20px;
+    background:#141428;
+    padding:15px;
+    border-radius:15px;
+    border:3px solid #4c6fff;
+    box-shadow:0 0 20px #4c6fff55;
+}
+
+/* ===== TILE BASE ===== */
+.tile{
+    width:90px;
+    height:90px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    font-size:20px;
+    background:#0f0f1a;
+    transition:0.15s;
+}
+
+/* ===== RIFT BLUE / PURPLE SYSTEM ===== */
+.blue{
+    background:#4c6fff;
+    color:white;
+    box-shadow:0 0 15px #4c6fff;
+}
+
+.purple{
+    background:#9b5cff;
+    color:white;
+    box-shadow:0 0 15px #9b5cff;
+}
+
+.neutral{
+    background:#1a1a2e;
+    color:#aaa;
+}
+
+/* merge pop */
+.pop{
+    animation:pop 0.15s ease;
+}
+
+@keyframes pop{
+    0%{transform:scale(0.7);}
+    60%{transform:scale(1.2);}
+    100%{transform:scale(1);}
+}
+
+button{
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:#4c6fff;
+    color:white;
+    margin:5px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ===== MENU ===== -->
+<div id="menu">
+    <div class="menuBox">
+        <h1>🌀 Rift 2048</h1>
+        <p>Blue vs Purple Rift Battle</p>
+        <button onclick="startGame()">Enter Rift</button>
+    </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="gameArea">
+
+<h1>Rift Duel 2048</h1>
+
+<button onclick="restart()">Restart</button>
+<button onclick="undo()">Undo</button>
+
+<div id="game"></div>
+
+</div>
+
+<script>
+
+let board;
+let history = [];
+let won = false;
+
+// ===== START GAME =====
+function startGame(){
+    document.getElementById("menu").style.display="none";
+    document.getElementById("gameArea").style.display="block";
+    init();
+}
+
+// ===== INIT =====
+function init(){
+    board = Array(4).fill().map(()=>Array(4).fill(0));
+    addTile();
+    addTile();
+    draw();
+}
+
+// ===== SPAWN =====
+function addTile(){
+    let empty=[];
+    for(let r=0;r<4;r++){
+        for(let c=0;c<4;c++){
+            if(board[r][c]===0) empty.push({r,c});
+        }
+    }
+    if(!empty.length) return;
+
+    let spot = empty[Math.floor(Math.random()*empty.length)];
+    board[spot.r][spot.c] = Math.random()<0.9 ? 2 : 4;
+}
+
+// ===== COLOR (BLUE vs PURPLE LOGIC) =====
+function getClass(val){
+
+    if(val===0) return "neutral";
+
+    if(val<=16) return "blue";
+    if(val<=256) return "purple";
+
+    return "blue"; // endgame glow mix
+}
+
+// ===== DRAW =====
+function draw(){
+    const game = document.getElementById("game");
+    game.innerHTML="";
+
+    for(let r=0;r<4;r++){
+        for(let c=0;c<4;c++){
+
+            let val = board[r][c];
+
+            let tile = document.createElement("div");
+            tile.className="tile "+getClass(val);
+            tile.textContent = val ? val : "";
+
+            game.appendChild(tile);
+        }
+    }
+}
+
+// ===== SLIDE =====
+function slide(row){
+    row = row.filter(x=>x!==0);
+
+    for(let i=0;i<row.length-1;i++){
+        if(row[i]===row[i+1]){
+            row[i]*=2;
+            row[i+1]=0;
+        }
+    }
+
+    row = row.filter(x=>x!==0);
+
+    while(row.length<4) row.push(0);
+
+    return row;
+}
+
+// ===== MOVES =====
+function moveLeft(){
+    for(let r=0;r<4;r++) board[r]=slide(board[r]);
+}
+
+function moveRight(){
+    for(let r=0;r<4;r++) board[r]=slide(board[r].reverse()).reverse();
+}
+
+function moveUp(){
+    for(let c=0;c<4;c++){
+        let col=[];
+        for(let r=0;r<4;r++) col.push(board[r][c]);
+        col=slide(col);
+        for(let r=0;r<4;r++) board[r][c]=col[r];
+    }
+}
+
+function moveDown(){
+    for(let c=0;c<4;c++){
+        let col=[];
+        for(let r=0;r<4;r++) col.push(board[r][c]);
+        col=slide(col.reverse()).reverse();
+        for(let r=0;r<4;r++) board[r][c]=col[r];
+    }
+}
+
+// ===== INPUT =====
+document.addEventListener("keydown", e=>{
+
+    let before = JSON.stringify(board);
+    history.push(before);
+
+    if(e.key==="ArrowLeft") moveLeft();
+    if(e.key==="ArrowRight") moveRight();
+    if(e.key==="ArrowUp") moveUp();
+    if(e.key==="ArrowDown") moveDown();
+
+    let after = JSON.stringify(board);
+
+    if(before!==after){
+        addTile();
+        draw();
+        popFX();
+    }
+});
+
+// ===== FX =====
+function popFX(){
+    const tiles=document.querySelectorAll(".tile");
+    tiles.forEach(t=>{
+        if(t.textContent!==""){
+            t.classList.add("pop");
+            setTimeout(()=>t.classList.remove("pop"),150);
+        }
+    });
+}
+
+// ===== UNDO =====
+function undo(){
+    if(history.length===0) return;
+    board = JSON.parse(history.pop());
+    draw();
+}
+
+// ===== RESTART =====
+function restart(){
+    history=[];
+    init();
+}
+
+</script>
+
+</body>
+</html>

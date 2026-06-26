@@ -246,11 +246,12 @@ King.prototype.isValidMove=function(to){
 /* =========================
    BOARD SETUP
 ========================= */
-
-function startGame(m){
+function startGame(mode){
   document.getElementById("menu").style.display="none";
   document.getElementById("gameArea").style.display="block";
   setup();
+
+  console.log("Mode:", mode); // optional debug
 }
 
 function setup(){
@@ -377,8 +378,6 @@ function render(){
     if(sq) sq.element.innerText=p.type[0];
   }
 }
-
-function startGame(mode){ startGame(mode); }
 
 </script>
 </body>

@@ -42,32 +42,49 @@ body{
   cursor:pointer;
 }
 
-/* GAME */
+/* LAYOUT */
 #game{ display:none; }
 
-h1{ color:#4c6fff; }
+.container{
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  gap:20px;
+  margin-top:20px;
+}
 
+/* CAPTURE PILES */
+.captures{
+  width:120px;
+  min-height:560px;
+  background:#141428;
+  border:2px solid #4c6fff;
+  border-radius:10px;
+  padding:10px;
+}
+
+.capBlue{ color:#4c6fff; }
+.capPurple{ color:#9b5cff; }
+
+/* BOARD */
 #board{
   display:grid;
   grid-template-columns:repeat(8,70px);
   grid-template-rows:repeat(8,70px);
-  justify-content:center;
-  margin-top:20px;
   border:3px solid #4c6fff;
 }
 
-/* GRID */
+/* SQUARES */
 .cell{
   width:70px;
   height:70px;
   display:flex;
-  align-items:center;
   justify-content:center;
+  align-items:center;
   font-size:30px;
   cursor:pointer;
 }
 
-/* checkerboard */
 .light{ background:#141428; }
 .dark{ background:#0f0f1a; }
 
@@ -83,11 +100,11 @@ h1{ color:#4c6fff; }
 }
 
 /* HIGHLIGHTS */
-.move{ background:#2a3a66 !important; }
-.capture{ background:#5a2a5a !important; }
+.move{ background:#263a66 !important; }
+.capture{ background:#663030 !important; }
 .selected{ outline:2px solid #4c6fff; }
 
-/* BUTTONS */
+/* BUTTON */
 button{
   margin:5px;
   padding:8px 15px;
@@ -101,6 +118,7 @@ button{
 
 <body>
 
+<!-- MENU -->
 <div id="menu">
   <div class="menuBox">
     <h1>🌀 Rift Chess</h1>
@@ -109,11 +127,29 @@ button{
   </div>
 </div>
 
+<!-- GAME -->
 <div id="game">
-  <h1>Rift Chess</h1>
+
+<h1>Rift Chess</h1>
+
+<div class="container">
+
+  <div class="captures" id="capPurple">
+    🟣 Purple Captures
+  </div>
+
   <div id="board"></div>
-  <h3 id="status">Blue's turn</h3>
-  <button onclick="reset()">Reset</button>
+
+  <div class="captures" id="capBlue">
+    🟦 Blue Captures
+  </div>
+
+</div>
+
+<h3 id="status">Blue's turn</h3>
+
+<button onclick="reset()">Reset</button>
+
 </div>
 
 <script>
@@ -122,6 +158,9 @@ let board=[];
 let turn="blue";
 let selected=null;
 let mode=2;
+
+let capBlue=[];
+let capPurple=[];
 
 /* PIECES */
 const P = {
@@ -137,19 +176,17 @@ function start(m){
   draw();
 }
 
-/* SETUP FULL CHESS */
+/* SETUP */
 function setup(){
   board = Array(8).fill().map(()=>Array(8).fill(null));
 
   const back=["r","n","b","q","k","b","n","r"];
 
-  // purple top
   for(let i=0;i<8;i++){
     board[0][i]="p"+back[i];
     board[1][i]="pp";
   }
 
-  // blue bottom
   for(let i=0;i<8;i++){
     board[7][i]="b"+back[i];
     board[6][i]="bp";
@@ -165,20 +202,21 @@ function draw(){
     for(let c=0;c<8;c++){
 
       let cell=document.createElement("div");
-      cell.className="cell "+((r+c)%2===0?"light":"dark");
+      cell.className="cell "+((r+c)%2?"dark":"light");
 
       let p=board[r][c];
 
       if(p){
-        let isBlue = p[0]==="b";
-        cell.textContent = P[p];
-        cell.classList.add(isBlue ? "blue" : "purple");
+        cell.textContent=P[p];
+        cell.classList.add(p[0]==="b"?"blue":"purple");
       }
 
       cell.onclick=()=>click(r,c);
       b.appendChild(cell);
     }
   }
+
+  updateCaptures();
 }
 
 /* CLICK */
@@ -193,6 +231,13 @@ function click(r,c){
   }
 
   if(selected && legal(selected.r,selected.c,r,c)){
+
+    // CAPTURE LOGIC
+    if(board[r][c]){
+      if(board[r][c][0]==="b") capBlue.push(board[r][c]);
+      else capPurple.push(board[r][c]);
+    }
+
     board[r][c]=board[selected.r][selected.c];
     board[selected.r][selected.c]=null;
 
@@ -203,10 +248,14 @@ function click(r,c){
     update();
 
     draw();
+
+    if(mode===1 && turn==="purple"){
+      setTimeout(ai,200);
+    }
   }
 }
 
-/* FULL PIECE RULES */
+/* LEGAL MOVES */
 function legal(fr,fc,tr,tc){
 
   let p=board[fr][fc];
@@ -217,62 +266,60 @@ function legal(fr,fc,tr,tc){
 
   let type=p[1];
 
-  // PAWN
+  // pawn
   if(type==="p"){
-    let dir = p[0]==="b" ? -1 : 1;
+    let dir=p[0]==="b"?-1:1;
 
     if(dc===0 && !board[tr][tc]){
       if(dr===dir) return true;
-      if((fr===1||fr===6) && dr===2*dir && !board[fr+dir][fc]) return true;
+      if((fr===1||fr===6)&&dr===2*dir) return true;
     }
 
     if(Math.abs(dc)===1 && dr===dir && board[tr][tc]){
       return true;
     }
-    return false;
   }
 
-  // ROOK
+  // rook
   if(type==="r"){
-    if(dr===0 || dc===0) return pathClear(fr,fc,tr,tc);
+    if(dr===0||dc===0) return path(fr,fc,tr,tc);
   }
 
-  // BISHOP
+  // bishop
   if(type==="b"){
-    if(Math.abs(dr)===Math.abs(dc)) return pathClear(fr,fc,tr,tc);
+    if(Math.abs(dr)===Math.abs(dc)) return path(fr,fc,tr,tc);
   }
 
-  // QUEEN
+  // queen
   if(type==="q"){
-    if(dr===0 || dc===0 || Math.abs(dr)===Math.abs(dc))
-      return pathClear(fr,fc,tr,tc);
+    if(dr===0||dc===0||Math.abs(dr)===Math.abs(dc))
+      return path(fr,fc,tr,tc);
   }
 
-  // KING
+  // king
   if(type==="k"){
     return Math.abs(dr)<=1 && Math.abs(dc)<=1;
   }
 
-  // KNIGHT
+  // knight
   if(type==="n"){
-    return (Math.abs(dr)===2 && Math.abs(dc)===1) ||
-           (Math.abs(dr)===1 && Math.abs(dc)===2);
+    return (Math.abs(dr)===2&&Math.abs(dc)===1)||
+           (Math.abs(dr)===1&&Math.abs(dc)===2);
   }
 
   return false;
 }
 
-/* PATH CHECK */
-function pathClear(fr,fc,tr,tc){
+/* PATH */
+function path(fr,fc,tr,tc){
   let dr=Math.sign(tr-fr);
   let dc=Math.sign(tc-fc);
 
-  let r=fr+dr, c=fc+dc;
+  let r=fr+dr,c=fc+dc;
 
-  while(r!==tr || c!==tc){
+  while(r!==tr||c!==tc){
     if(board[r][c]) return false;
-    r+=dr;
-    c+=dc;
+    r+=dr;c+=dc;
   }
   return true;
 }
@@ -288,11 +335,8 @@ function showMoves(r,c){
     let cc=i%8;
 
     if(legal(r,c,rr,cc)){
-      if(board[rr][cc]){
-        cells[i].classList.add("capture");
-      } else {
-        cells[i].classList.add("move");
-      }
+      if(board[rr][cc]) cells[i].classList.add("capture");
+      else cells[i].classList.add("move");
     }
   }
 
@@ -305,10 +349,55 @@ function clearHints(){
   });
 }
 
+/* CAPTURES UI */
+function updateCaptures(){
+  document.getElementById("capBlue").innerHTML =
+    "🟦 Blue Captures<br>" + capBlue.map(p=>P[p]).join(" ");
+
+  document.getElementById("capPurple").innerHTML =
+    "🟣 Purple Captures<br>" + capPurple.map(p=>P[p]).join(" ");
+}
+
+/* AI (simple) */
+function ai(){
+  let moves=[];
+
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      let p=board[r][c];
+      if(p && p[0]==="p"){
+        for(let rr=0;rr<8;rr++){
+          for(let cc=0;cc<8;cc++){
+            if(legal(r,c,rr,cc)){
+              moves.push([r,c,rr,cc]);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if(!moves.length) return;
+
+  let m=moves[Math.floor(Math.random()*moves.length)];
+
+  if(board[m[2]][m[3]]){
+    if(board[m[2]][m[3]][0]==="b") capBlue.push(board[m[2]][m[3]]);
+    else capPurple.push(board[m[2]][m[3]]);
+  }
+
+  board[m[2]][m[3]]=board[m[0]][m[1]];
+  board[m[0]][m[1]]=null;
+
+  turn="blue";
+  update();
+  draw();
+}
+
 /* STATUS */
 function update(){
-  document.getElementById("status").textContent =
-    turn==="blue" ? "Blue's turn" : "Purple's turn";
+  document.getElementById("status").textContent=
+    turn==="blue"?"Blue's turn":"Purple's turn";
 }
 
 /* RESET */
@@ -316,6 +405,8 @@ function reset(){
   setup();
   turn="blue";
   selected=null;
+  capBlue=[];
+  capPurple=[];
   draw();
 }
 

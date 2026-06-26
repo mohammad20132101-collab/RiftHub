@@ -18,17 +18,48 @@ body{
   overflow:hidden;
 }
 
-/* OUTER GLOW BACKGROUND */
+/* BACKGROUND DEPTH */
 body::before{
   content:"";
   position:absolute;
   width:100%;
   height:100%;
   background:radial-gradient(circle at center,#1a1a3a,#0f0f1a);
-  z-index:-2;
+  z-index:-3;
 }
 
-/* MAIN PANEL */
+/* PULSE LAYER (NOW PROPER SHOCKWAVE SIZE) */
+#pulse{
+  position:fixed;
+  top:50%;
+  left:50%;
+  width:200px;
+  height:200px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  opacity:0;
+  z-index:0; /* behind panel */
+}
+
+/* DOUBLE RING EFFECT */
+@keyframes pulseAnim{
+  0%{
+    transform:translate(-50%,-50%) scale(0.2);
+    opacity:0.9;
+    filter:blur(0px);
+  }
+  60%{
+    opacity:0.35;
+  }
+  100%{
+    transform:translate(-50%,-50%) scale(18);
+    opacity:0;
+    filter:blur(2px);
+  }
+}
+
+/* MAIN PANEL (ABOVE PULSE) */
 #panel{
   width:600px;
   padding:25px;
@@ -38,6 +69,7 @@ body::before{
   box-shadow:0 0 25px #4c6fff55;
   text-align:center;
   position:relative;
+  z-index:2;
 }
 
 /* TITLE */
@@ -82,7 +114,6 @@ h1{
   border-radius:20px;
   background:#141428;
   border:2px solid #4c6fff;
-  box-shadow:0 0 15px #4c6fff33;
 }
 
 /* SHAKE */
@@ -114,42 +145,11 @@ button{
   margin:6px;
   border-radius:10px;
   cursor:pointer;
-  transition:0.2s;
-}
-
-button:hover{
-  transform:scale(1.05);
-  box-shadow:0 0 15px #4c6fff55;
 }
 
 #back{
   border-color:#9b5cff;
   color:#9b5cff;
-}
-
-/* RADIAL PULSE */
-#pulse{
-  position:fixed;
-  top:50%;
-  left:50%;
-  width:20px;
-  height:20px;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  pointer-events:none;
-  opacity:0;
-  z-index:999;
-}
-
-@keyframes pulseAnim{
-  0%{
-    transform:translate(-50%,-50%) scale(0.2);
-    opacity:0.8;
-  }
-  100%{
-    transform:translate(-50%,-50%) scale(14);
-    opacity:0;
-  }
 }
 </style>
 </head>
@@ -207,14 +207,14 @@ function getHand(x){
   return "✌️";
 }
 
-/* RADIAL PULSE */
+/* BIG RADIAL SHOCKWAVE */
 function pulse(color){
   const p = document.getElementById("pulse");
 
-  p.style.background = color;
+  p.style.background = `radial-gradient(circle, ${color}aa, transparent 70%)`;
   p.style.animation = "none";
   void p.offsetWidth;
-  p.style.animation = "pulseAnim 0.45s ease-out";
+  p.style.animation = "pulseAnim 0.55s ease-out";
 }
 
 /* PLAY */

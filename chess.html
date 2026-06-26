@@ -32,39 +32,34 @@ body{
   border:3px solid #4c6fff;
 }
 
-.menuBox button{
-  margin:10px;
-  padding:10px 20px;
+button{
+  margin:5px;
+  padding:8px 15px;
   border:none;
   background:#4c6fff;
   color:white;
-  border-radius:8px;
+  border-radius:6px;
   cursor:pointer;
 }
 
-/* LAYOUT */
+/* GAME */
 #game{ display:none; }
 
 .container{
   display:flex;
   justify-content:center;
-  align-items:flex-start;
-  gap:20px;
+  gap:25px;
   margin-top:20px;
 }
 
-/* CAPTURE PILES */
 .captures{
-  width:120px;
+  width:160px;
   min-height:560px;
   background:#141428;
   border:2px solid #4c6fff;
   border-radius:10px;
   padding:10px;
 }
-
-.capBlue{ color:#4c6fff; }
-.capPurple{ color:#9b5cff; }
 
 /* BOARD */
 #board{
@@ -74,7 +69,6 @@ body{
   border:3px solid #4c6fff;
 }
 
-/* SQUARES */
 .cell{
   width:70px;
   height:70px;
@@ -88,31 +82,32 @@ body{
 .light{ background:#141428; }
 .dark{ background:#0f0f1a; }
 
-/* PIECES */
-.blue{
-  color:#4c6fff;
-  text-shadow:0 0 10px #4c6fff;
-}
+.blue{ color:#4c6fff; }
+.purple{ color:#9b5cff; }
 
-.purple{
-  color:#9b5cff;
-  text-shadow:0 0 10px #9b5cff;
-}
-
-/* HIGHLIGHTS */
-.move{ background:#263a66 !important; }
-.capture{ background:#663030 !important; }
+.move{ background:#223a66 !important; }
+.capture{ background:#662a2a !important; }
 .selected{ outline:2px solid #4c6fff; }
 
-/* BUTTON */
-button{
-  margin:5px;
-  padding:8px 15px;
-  border:none;
-  background:#4c6fff;
-  color:white;
-  border-radius:6px;
+/* PROMOTION MENU */
+#promo{
+  position:fixed;
+  top:0;left:0;
+  width:100%;
+  height:100%;
+  background:#000000cc;
+  display:none;
+  justify-content:center;
+  align-items:center;
 }
+
+.promoBox{
+  background:#141428;
+  padding:20px;
+  border:2px solid #4c6fff;
+  border-radius:10px;
+}
+
 </style>
 </head>
 
@@ -130,27 +125,29 @@ button{
 <!-- GAME -->
 <div id="game">
 
-<h1>Rift Chess</h1>
+<h1 id="status">Blue's turn</h1>
 
 <div class="container">
 
-  <div class="captures" id="capPurple">
-    🟣 Purple Captures
-  </div>
+  <div class="captures" id="capPurple">🟣 Captured</div>
 
   <div id="board"></div>
 
-  <div class="captures" id="capBlue">
-    🟦 Blue Captures
-  </div>
+  <div class="captures" id="capBlue">🟦 Captured</div>
 
 </div>
 
-<h3 id="status">Blue's turn</h3>
+</div>
 
-<button onclick="reset()">Reset</button>
-<button onclick="window.location.href='index.html'">Back</button>
-
+<!-- PROMOTION -->
+<div id="promo">
+  <div class="promoBox">
+    <h3>Promote Pawn</h3>
+    <button onclick="promote('q')">Queen</button>
+    <button onclick="promote('r')">Rook</button>
+    <button onclick="promote('b')">Bishop</button>
+    <button onclick="promote('n')">Knight</button>
+  </div>
 </div>
 
 <script>
@@ -163,8 +160,10 @@ let mode=2;
 let capBlue=[];
 let capPurple=[];
 
+let promoPawn=null;
+
 /* PIECES */
-const P = {
+const P={
   bp:"♟", br:"♜", bn:"♞", bb:"♝", bq:"♛", bk:"♚",
   pp:"♟", pr:"♜", pn:"♞", pb:"♝", pq:"♛", pk:"♚"
 };
@@ -179,9 +178,9 @@ function start(m){
 
 /* SETUP */
 function setup(){
-  board = Array(8).fill().map(()=>Array(8).fill(null));
+  board=Array(8).fill().map(()=>Array(8).fill(null));
 
-  const back=["r","n","b","q","k","b","n","r"];
+  let back=["r","n","b","q","k","b","n","r"];
 
   for(let i=0;i<8;i++){
     board[0][i]="p"+back[i];
@@ -196,28 +195,27 @@ function setup(){
 
 /* DRAW */
 function draw(){
-  const b=document.getElementById("board");
+  let b=document.getElementById("board");
   b.innerHTML="";
 
   for(let r=0;r<8;r++){
     for(let c=0;c<8;c++){
-
-      let cell=document.createElement("div");
-      cell.className="cell "+((r+c)%2?"dark":"light");
+      let d=document.createElement("div");
+      d.className="cell "+((r+c)%2?"dark":"light");
 
       let p=board[r][c];
-
       if(p){
-        cell.textContent=P[p];
-        cell.classList.add(p[0]==="b"?"blue":"purple");
+        d.textContent=P[p];
+        d.classList.add(p[0]==="b"?"blue":"purple");
       }
 
-      cell.onclick=()=>click(r,c);
-      b.appendChild(cell);
+      d.onclick=()=>click(r,c);
+      b.appendChild(d);
     }
   }
 
   updateCaptures();
+  checkGameState();
 }
 
 /* CLICK */
@@ -233,42 +231,58 @@ function click(r,c){
 
   if(selected && legal(selected.r,selected.c,r,c)){
 
-    // CAPTURE LOGIC
-    if(board[r][c]){
-      if(board[r][c][0]==="b") capBlue.push(board[r][c]);
-      else capPurple.push(board[r][c]);
-    }
-
-    board[r][c]=board[selected.r][selected.c];
-    board[selected.r][selected.c]=null;
+    move(selected.r,selected.c,r,c);
 
     selected=null;
     clearHints();
 
     turn = turn==="blue"?"purple":"blue";
-    update();
 
     draw();
-
-    if(mode===1 && turn==="purple"){
-      setTimeout(ai,200);
-    }
   }
 }
 
-/* LEGAL MOVES */
-function legal(fr,fc,tr,tc){
+/* MOVE */
+function move(fr,fc,tr,tc){
 
+  let p=board[fr][fc];
+
+  if(board[tr][tc]){
+    if(board[tr][tc][0]==="b") capBlue.push(board[tr][tc]);
+    else capPurple.push(board[tr][tc]);
+  }
+
+  board[tr][tc]=p;
+  board[fr][fc]=null;
+
+  // PROMOTION
+  if(p[1]==="p" && (tr===0||tr===7)){
+    promoPawn={r:tr,c:tc,color:p[0]};
+    document.getElementById("promo").style.display="flex";
+  }
+}
+
+/* PROMOTION */
+function promote(type){
+  if(!promoPawn) return;
+
+  board[promoPawn.r][promoPawn.c]=promoPawn.color+type;
+  promoPawn=null;
+
+  document.getElementById("promo").style.display="none";
+
+  draw();
+}
+
+/* LEGAL (same simplified rules) */
+function legal(fr,fc,tr,tc){
   let p=board[fr][fc];
   if(!p) return false;
 
-  let dr=tr-fr;
-  let dc=tc-fc;
+  let dr=tr-fr, dc=tc-fc;
+  let t=p[1];
 
-  let type=p[1];
-
-  // pawn
-  if(type==="p"){
+  if(t==="p"){
     let dir=p[0]==="b"?-1:1;
 
     if(dc===0 && !board[tr][tc]){
@@ -281,32 +295,11 @@ function legal(fr,fc,tr,tc){
     }
   }
 
-  // rook
-  if(type==="r"){
-    if(dr===0||dc===0) return path(fr,fc,tr,tc);
-  }
-
-  // bishop
-  if(type==="b"){
-    if(Math.abs(dr)===Math.abs(dc)) return path(fr,fc,tr,tc);
-  }
-
-  // queen
-  if(type==="q"){
-    if(dr===0||dc===0||Math.abs(dr)===Math.abs(dc))
-      return path(fr,fc,tr,tc);
-  }
-
-  // king
-  if(type==="k"){
-    return Math.abs(dr)<=1 && Math.abs(dc)<=1;
-  }
-
-  // knight
-  if(type==="n"){
-    return (Math.abs(dr)===2&&Math.abs(dc)===1)||
-           (Math.abs(dr)===1&&Math.abs(dc)===2);
-  }
+  if(t==="r") if(dr===0||dc===0) return path(fr,fc,tr,tc);
+  if(t==="b") if(Math.abs(dr)===Math.abs(dc)) return path(fr,fc,tr,tc);
+  if(t==="q") if(dr===0||dc===0||Math.abs(dr)===Math.abs(dc)) return path(fr,fc,tr,tc);
+  if(t==="k") return Math.abs(dr)<=1&&Math.abs(dc)<=1;
+  if(t==="n") return (Math.abs(dr)===2&&Math.abs(dc)===1)||(Math.abs(dr)===1&&Math.abs(dc)===2);
 
   return false;
 }
@@ -325,91 +318,89 @@ function path(fr,fc,tr,tc){
   return true;
 }
 
-/* HIGHLIGHT */
-function showMoves(r,c){
-  clearHints();
+/* GAME STATE */
+function checkGameState(){
 
-  let cells=document.querySelectorAll(".cell");
+  let blueMoves=hasMoves("b");
+  let purpleMoves=hasMoves("p");
 
-  for(let i=0;i<64;i++){
-    let rr=Math.floor(i/8);
-    let cc=i%8;
+  let blueKing=inCheck("b");
+  let purpleKing=inCheck("p");
 
-    if(legal(r,c,rr,cc)){
-      if(board[rr][cc]) cells[i].classList.add("capture");
-      else cells[i].classList.add("move");
-    }
+  // ONLY KINGS LEFT
+  let pieces=board.flat().filter(x=>x);
+  let onlyKings=pieces.every(x=>x[1]==="k");
+
+  if(onlyKings){
+    end("Draw (Kings only)");
+    return;
   }
 
-  cells[r*8+c].classList.add("selected");
+  if(!blueMoves && turn==="blue"){
+    end(blueKing?"Purple wins (checkmate)":"Draw (stalemate)");
+  }
+
+  if(!purpleMoves && turn==="purple"){
+    end(purpleKing?"Blue wins (checkmate)":"Draw (stalemate)");
+  }
 }
 
-function clearHints(){
-  document.querySelectorAll(".cell").forEach(c=>{
-    c.classList.remove("move","capture","selected");
-  });
-}
-
-/* CAPTURES UI */
-function updateCaptures(){
-  document.getElementById("capBlue").innerHTML =
-    "🟦 Blue Captures<br>" + capBlue.map(p=>P[p]).join(" ");
-
-  document.getElementById("capPurple").innerHTML =
-    "🟣 Purple Captures<br>" + capPurple.map(p=>P[p]).join(" ");
-}
-
-/* AI (simple) */
-function ai(){
-  let moves=[];
-
+/* SIMPLE MOVE CHECK */
+function hasMoves(color){
   for(let r=0;r<8;r++){
     for(let c=0;c<8;c++){
       let p=board[r][c];
-      if(p && p[0]==="p"){
-        for(let rr=0;rr<8;rr++){
-          for(let cc=0;cc<8;cc++){
-            if(legal(r,c,rr,cc)){
-              moves.push([r,c,rr,cc]);
-            }
-          }
+      if(!p||p[0]!==color) continue;
+
+      for(let rr=0;rr<8;rr++){
+        for(let cc=0;cc<8;cc++){
+          if(legal(r,c,rr,cc)) return true;
         }
       }
     }
   }
+  return false;
+}
 
-  if(!moves.length) return;
+/* CHECK (simple king attack scan) */
+function inCheck(color){
+  let king=null;
 
-  let m=moves[Math.floor(Math.random()*moves.length)];
-
-  if(board[m[2]][m[3]]){
-    if(board[m[2]][m[3]][0]==="b") capBlue.push(board[m[2]][m[3]]);
-    else capPurple.push(board[m[2]][m[3]]);
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      if(board[r][c]===color+"k") king={r,c};
+    }
   }
 
-  board[m[2]][m[3]]=board[m[0]][m[1]];
-  board[m[0]][m[1]]=null;
+  if(!king) return false;
 
-  turn="blue";
-  update();
-  draw();
+  let enemy=color==="b"?"p":"b";
+
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      let p=board[r][c];
+      if(p&&p[0]===enemy){
+        if(legal(r,c,king.r,king.c)) return true;
+      }
+    }
+  }
+
+  return false;
 }
 
-/* STATUS */
-function update(){
-  document.getElementById("status").textContent=
-    turn==="blue"?"Blue's turn":"Purple's turn";
+/* END */
+function end(text){
+  document.getElementById("status").textContent=text;
 }
 
-/* RESET */
-function reset(){
-  setup();
-  turn="blue";
-  selected=null;
-  capBlue=[];
-  capPurple=[];
-  draw();
+/* UI */
+function updateCaptures(){
+  document.getElementById("capBlue").innerHTML="🟦 Captured<br>"+capBlue.join(" ");
+  document.getElementById("capPurple").innerHTML="🟣 Captured<br>"+capPurple.join(" ");
 }
+
+function showMoves(){ }
+function clearHints(){ }
 
 </script>
 

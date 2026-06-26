@@ -41,11 +41,6 @@ canvas{
 <h1>🌀 Rift Perfect Draw</h1>
 <div id="score">Hold mouse to draw</div>
 
-<div>
-  <button onclick="startGame()">Restart</button>
-  <button onclick="window.location.href='index.html'">Back</button>
-</div>
-
 <canvas id="c" width="500" height="500"></canvas>
 
 <script>
@@ -56,9 +51,10 @@ let drawing = false;
 let finished = false;
 
 let points = [];
-let mode = "circle";
+let pathStarted = false;
 
-let center = {x:250,y:250};
+let center = {x:250, y:250};
+
 let score = 0;
 
 /* RESET */
@@ -67,6 +63,7 @@ function reset(){
   points = [];
   drawing = false;
   finished = false;
+  pathStarted = false;
   score = 0;
   updateScore("Hold mouse to draw");
   drawCenter();
@@ -88,24 +85,26 @@ canvas.addEventListener("mousedown", (e)=>{
 
   if(finished){
     reset();
-    drawCenter();
-    return;
   }
 
   drawing = true;
+
+  ctx.beginPath(); // real stroke start
+  pathStarted = true;
 });
 
-/* STOP DRAW (finish attempt) */
+/* STOP DRAW */
 canvas.addEventListener("mouseup", ()=>{
   if(!drawing) return;
 
   drawing = false;
   finished = true;
 
-  updateScore("Final Score: " + score + "%");
+  let final = calculateScore();
+  updateScore("Final Score: " + final.toFixed(1) + "%");
 });
 
-/* DRAW LOOP */
+/* DRAW */
 canvas.addEventListener("mousemove", (e)=>{
   if(!drawing || finished) return;
 
@@ -115,64 +114,97 @@ canvas.addEventListener("mousemove", (e)=>{
 
   points.push({x,y});
 
-  let s = pointScore(x,y);
-  drawPoint(x,y,s);
+  drawLine(x,y);
 
-  calculateScore();
+  let live = liveScore(x,y);
+  updateScore("Score: " + live.toFixed(1) + "%");
 });
 
-/* LIVE POINT COLOUR */
-function drawPoint(x,y,s){
+/* REAL LINE (not dots) */
+function drawLine(x,y){
 
-  let col = "#ff8844";
-
-  if(s > 80) col = "#00ff99";
-  else if(s > 50) col = "#ffff66";
-
-  ctx.fillStyle = col;
-  ctx.shadowBlur = 6;
-  ctx.shadowColor = col;
-
-  ctx.beginPath();
-  ctx.arc(x,y,2.5,0,Math.PI*2);
-  ctx.fill();
+  ctx.lineTo(x,y);
+  ctx.strokeStyle = "#4c6fff";
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = "#4c6fff";
+  ctx.stroke();
 }
 
-/* POINT SCORE */
-function pointScore(x,y){
-  let r = 120;
-  let d = Math.hypot(x-center.x,y-center.y);
+/* LIVE SCORE (robust) */
+function liveScore(x,y){
+  if(points.length < 5) return 0;
 
-  return Math.max(0, 100 - Math.abs(d-r)*1.2);
-}
+  let r = estimatedRadius();
 
-/* FINAL SCORE */
-function calculateScore(){
-  if(points.length < 10) return;
-
-  let total = 0;
-  let r = 120;
+  let error = 0;
 
   for(let p of points){
-    let d = Math.hypot(p.x-center.x,p.y-center.y);
-    total += Math.abs(d-r);
+    let d = dist(p.x,p.y,center.x,center.y);
+    error += Math.abs(d - r);
   }
 
-  score = Math.max(0, Math.min(100,
-    Math.round(100 - total / points.length / 1.8)
-  ));
+  let base = 100 - (error / points.length / 2);
 
-  updateScore("Score: " + score + "%");
+  return clamp(base, 0, 100);
+}
+
+/* FINAL SCORE (better + size aware) */
+function calculateScore(){
+
+  if(points.length < 10) return 0;
+
+  let r = estimatedRadius();
+
+  let error = 0;
+  let wobble = 0;
+
+  for(let i=1;i<points.length;i++){
+    let p = points[i];
+    let d = dist(p.x,p.y,center.x,center.y);
+
+    error += Math.abs(d - r);
+
+    // wobble penalty (random lines get punished)
+    wobble += dist(points[i-1].x,points[i-1].y,p.x,p.y);
+  }
+
+  let avgError = error / points.length;
+  let avgWobble = wobble / points.length;
+
+  // FINAL COMBINATION SCORE
+  let score =
+    100
+    - avgError * 1.8
+    - Math.abs(avgWobble - 5) * 2;
+
+  return clamp(score,0,100);
+}
+
+/* AUTO DETECT SIZE (fixes your BIGGEST problem) */
+function estimatedRadius(){
+  let total = 0;
+
+  for(let p of points){
+    total += dist(p.x,p.y,center.x,center.y);
+  }
+
+  return total / points.length;
+}
+
+/* DIST */
+function dist(x1,y1,x2,y2){
+  return Math.sqrt((x1-x2)**2 + (y1-y2)**2);
+}
+
+/* CLAMP */
+function clamp(v,min,max){
+  return Math.max(min,Math.min(max,v));
 }
 
 /* UI */
 function updateScore(text){
   document.getElementById("score").innerText = text;
-}
-// RESTART
-function restart(){
-    history=[];
-    init();
 }
 </script>
 

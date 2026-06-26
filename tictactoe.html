@@ -1,1 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rift Tic Tac Toe</title>
 
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#0f0f1a;
+  color:white;
+  text-align:center;
+}
+
+/* MENU */
+#menu{
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:#0f0f1a;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.menuBox{
+  background:#141428;
+  padding:30px;
+  border-radius:15px;
+  border:3px solid #4c6fff;
+  box-shadow:0 0 25px #4c6fff55;
+}
+
+.menuBox h1{
+  color:#4c6fff;
+}
+
+.menuBox button{
+  margin:10px;
+  padding:10px 20px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#4c6fff;
+  color:white;
+}
+
+/* GAME */
+#gameArea{
+  display:none;
+}
+
+h1{
+  color:#4c6fff;
+}
+
+/* BOARD */
+#board{
+  display:grid;
+  grid-template-columns:repeat(3,100px);
+  gap:10px;
+  justify-content:center;
+  margin-top:20px;
+}
+
+.cell{
+  width:100px;
+  height:100px;
+  background:#141428;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:40px;
+  cursor:pointer;
+  border:2px solid #4c6fff;
+}
+
+.blue{
+  color:#4c6fff;
+  text-shadow:0 0 10px #4c6fff;
+}
+
+.purple{
+  color:#9b5cff;
+  text-shadow:0 0 10px #9b5cff;
+}
+
+button{
+  margin:5px;
+  padding:8px 15px;
+  border:none;
+  background:#4c6fff;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- MENU -->
+<div id="menu">
+  <div class="menuBox">
+    <h1>🌀 Rift Tic Tac Toe</h1>
+    <p>Select Mode</p>
+    <button onclick="startGame(1)">1 Player</button>
+    <button onclick="startGame(2)">2 Player</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="gameArea">
+
+<h1>Rift Tic Tac Toe</h1>
+
+<div id="board"></div>
+
+<h2 id="status">Blue's turn</h2>
+
+<button onclick="resetGame()">Reset</button>
+<button onclick="window.location.href='index.html'">Back</button>
+
+</div>
+
+<script>
+
+let board = ["","","","","","","","",""];
+let current = "X";
+let gameOver = false;
+let mode = 2;
+
+function startGame(m){
+  mode = m;
+  document.getElementById("menu").style.display="none";
+  document.getElementById("gameArea").style.display="block";
+  draw();
+}
+
+function draw(){
+  const b = document.getElementById("board");
+  b.innerHTML="";
+
+  board.forEach((v,i)=>{
+    const cell = document.createElement("div");
+    cell.className="cell";
+
+    if(v==="X"){
+      cell.textContent="X";
+      cell.classList.add("blue");
+    }
+    if(v==="O"){
+      cell.textContent="O";
+      cell.classList.add("purple");
+    }
+
+    cell.onclick=()=>move(i);
+    b.appendChild(cell);
+  });
+}
+
+function move(i){
+  if(gameOver || board[i] !== "") return;
+
+  board[i]=current;
+  draw();
+
+  if(checkWin(current)){
+    end(current);
+    return;
+  }
+
+  current = current==="X" ? "O" : "X";
+  updateStatus();
+
+  if(mode===1 && current==="O"){
+    setTimeout(aiMove,300);
+  }
+}
+
+function aiMove(){
+  let empty = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+
+  let move = empty[Math.floor(Math.random()*empty.length)];
+  board[move]="O";
+
+  draw();
+
+  if(checkWin("O")){
+    end("O");
+    return;
+  }
+
+  current="X";
+  updateStatus();
+}
+
+function checkWin(p){
+  const w=[
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,6,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  return w.some(c=>c.every(i=>board[i]===p));
+}
+
+function end(p){
+  gameOver=true;
+  document.getElementById("status").textContent =
+    p==="X" ? "Blue wins" : "Purple wins";
+}
+
+function updateStatus(){
+  document.getElementById("status").textContent =
+    current==="X" ? "Blue's turn" : "Purple's turn";
+}
+
+function resetGame(){
+  board=["","","","","","","","",""];
+  current="X";
+  gameOver=false;
+  updateStatus();
+  draw();
+}
+
+</script>
+
+</body>
+</html>

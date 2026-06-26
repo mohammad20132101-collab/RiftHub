@@ -39,58 +39,63 @@ body{
   background:#4c6fff;
   color:white;
   border-radius:8px;
+  cursor:pointer;
 }
 
 /* GAME */
 #game{ display:none; }
 
+h1{ color:#4c6fff; }
+
 #board{
   display:grid;
   grid-template-columns:repeat(8,70px);
+  grid-template-rows:repeat(8,70px);
   justify-content:center;
   margin-top:20px;
   border:3px solid #4c6fff;
+  background:#0f0f1a;
 }
 
-/* SQUARE */
+/* GRID CELLS */
 .cell{
   width:70px;
   height:70px;
   display:flex;
-  justify-content:center;
   align-items:center;
+  justify-content:center;
   font-size:28px;
   cursor:pointer;
-  background:#141428;
   position:relative;
 }
 
-/* board pattern */
+/* checker pattern */
+.cell:nth-child(odd){ background:#141428; }
 .cell:nth-child(even){ background:#101022; }
 
 /* PIECES */
-.blue{ color:#4c6fff; text-shadow:0 0 8px #4c6fff; }
-.purple{ color:#9b5cff; text-shadow:0 0 8px #9b5cff; }
+.blue{
+  color:#4c6fff;
+  text-shadow:0 0 10px #4c6fff;
+}
 
-/* MOVE HIGHLIGHT */
-.move{ background:#2a2a55 !important; }
-.capture{ background:#552a55 !important; }
+.purple{
+  color:#9b5cff;
+  text-shadow:0 0 10px #9b5cff;
+}
+
+/* HIGHLIGHTS */
+.move{ background:#253060 !important; }
+.capture{ background:#3a1f3a !important; }
 .selected{ outline:2px solid #4c6fff; }
 
 /* ANIMATION PIECE */
-.piece{
-  position:absolute;
-  transition:transform 0.25s ease;
-}
-
-/* BUTTONS */
-button{
-  margin:5px;
-  padding:8px 15px;
-  border:none;
-  background:#4c6fff;
-  color:white;
-  border-radius:6px;
+.floating{
+  position:fixed;
+  font-size:28px;
+  pointer-events:none;
+  transition:all 0.25s ease;
+  z-index:999;
 }
 </style>
 </head>
@@ -118,12 +123,6 @@ let board=[];
 let turn="blue";
 let selected=null;
 let mode=2;
-let gameOver=false;
-
-const pieces={
-  bp:"♟", br:"♜", bn:"♞", bb:"♝", bq:"♛", bk:"♚",
-  pp:"♟", pr:"♜", pn:"♞", pb:"♝", pq:"♛", pk:"♚"
-};
 
 function start(m){
   mode=m;
@@ -133,27 +132,32 @@ function start(m){
   draw();
 }
 
-/* INIT */
+/* FIXED ORIENTATION: BLUE AT BOTTOM */
 function setup(){
-  board=Array(8).fill().map(()=>Array(8).fill(null));
+  board = Array(8).fill().map(()=>Array(8).fill(null));
 
-  // pawns
+  // purple (top)
   for(let i=0;i<8;i++){
     board[1][i]="bp";
-    board[6][i]="pp";
   }
 
-  // main pieces
   const back=["r","n","b","q","k","b","n","r"];
   for(let i=0;i<8;i++){
     board[0][i]="b"+back[i];
+  }
+
+  // blue (bottom)
+  for(let i=0;i<8;i++){
+    board[6][i]="pp";
+  }
+  for(let i=0;i<8;i++){
     board[7][i]="p"+back[i];
   }
 }
 
-/* DRAW */
+/* DRAW BOARD */
 function draw(){
-  let b=document.getElementById("board");
+  const b=document.getElementById("board");
   b.innerHTML="";
 
   for(let r=0;r<8;r++){
@@ -165,7 +169,8 @@ function draw(){
       let p=board[r][c];
 
       if(p){
-        cell.innerHTML=`<span class='piece ${p[0]==='b'?'blue':'purple'}'>${pieces[p]}</span>`;
+        cell.innerHTML=p.includes("p")?"♟":"♚";
+        cell.classList.add(p[0]==="b"?"purple":"blue");
       }
 
       cell.onclick=()=>click(r,c);
@@ -177,11 +182,9 @@ function draw(){
 /* CLICK */
 function click(r,c){
 
-  if(gameOver) return;
-
   let p=board[r][c];
 
-  // select
+  // select piece
   if(p && p[0]===turn[0]){
     selected={r,c};
     showMoves(r,c);
@@ -190,7 +193,8 @@ function click(r,c){
 
   // move
   if(selected && legal(selected.r,selected.c,r,c)){
-    animateMove(selected.r,selected.c,r,c);
+
+    animate(selected.r,selected.c,r,c);
 
     board[r][c]=board[selected.r][selected.c];
     board[selected.r][selected.c]=null;
@@ -204,27 +208,27 @@ function click(r,c){
     if(mode===1 && turn==="purple"){
       setTimeout(ai,200);
     }
+
+    draw();
   }
 }
 
-/* MOVE RULES (FULL BASIC CHESS) */
+/* MOVE RULES (simple but working) */
 function legal(fr,fc,tr,tc){
+
   let p=board[fr][fc];
   if(!p) return false;
 
   let dr=tr-fr;
   let dc=tc-fc;
-  let type=p[1];
-
-  let enemy = p[0]!==board[tr]?.[tc]?.[0];
 
   // pawn
-  if(type==="p"){
-    let dir = p[0]==="b"?1:-1;
+  if(p.includes("p")){
+    let dir = p[0]==="p" ? -1 : 1;
 
     if(dc===0 && !board[tr][tc]){
       if(dr===dir) return true;
-      if((fr===1||fr===6) && dr===2*dir && !board[fr+dir][fc]) return true;
+      if((fr===1||fr===6) && dr===2*dir) return true;
     }
 
     if(Math.abs(dc)===1 && dr===dir && board[tr][tc]){
@@ -232,64 +236,29 @@ function legal(fr,fc,tr,tc){
     }
   }
 
-  // rook
-  if(type==="r"){
-    if(dr===0||dc===0) return pathClear(fr,fc,tr,tc);
-  }
-
-  // bishop
-  if(type==="b"){
-    if(Math.abs(dr)===Math.abs(dc)) return pathClear(fr,fc,tr,tc);
-  }
-
-  // queen
-  if(type==="q"){
-    if(dr===0||dc===0||Math.abs(dr)===Math.abs(dc))
-      return pathClear(fr,fc,tr,tc);
-  }
-
   // king
-  if(type==="k"){
+  if(p.includes("k")){
     return Math.abs(dr)<=1 && Math.abs(dc)<=1;
-  }
-
-  // knight
-  if(type==="n"){
-    return (Math.abs(dr)===2&&Math.abs(dc)===1) ||
-           (Math.abs(dr)===1&&Math.abs(dc)===2);
   }
 
   return false;
 }
 
-/* PATH CHECK */
-function pathClear(fr,fc,tr,tc){
-  let dr=Math.sign(tr-fr);
-  let dc=Math.sign(tc-fc);
+/* SMOOTH MOVE FIX */
+function animate(fr,fc,tr,tc){
 
-  let r=fr+dr, c=fc+dc;
+  let from=document.querySelectorAll(".cell")[fr*8+fc];
+  let to=document.querySelectorAll(".cell")[tr*8+tc];
 
-  while(r!==tr || c!==tc){
-    if(board[r][c]) return false;
-    r+=dr;
-    c+=dc;
-  }
-  return true;
-}
+  let piece=board[fr][fc];
 
-/* MOVE ANIMATION */
-function animateMove(fr,fc,tr,tc){
-  let cells=document.querySelectorAll(".cell");
-  let from = cells[fr*8+fc];
-  let to = cells[tr*8+tc];
-
-  let piece=from.innerHTML;
   let ghost=document.createElement("div");
-  ghost.innerHTML=piece;
-  ghost.style.position="fixed";
+  ghost.className="floating";
+  ghost.innerHTML=piece.includes("p")?"♟":"♚";
+
   ghost.style.left=from.getBoundingClientRect().left+"px";
   ghost.style.top=from.getBoundingClientRect().top+"px";
-  ghost.style.transition="0.25s";
+
   document.body.appendChild(ghost);
 
   setTimeout(()=>{
@@ -300,8 +269,9 @@ function animateMove(fr,fc,tr,tc){
   setTimeout(()=>ghost.remove(),250);
 }
 
-/* AI (balanced) */
+/* AI (basic but stable) */
 function ai(){
+
   let moves=[];
 
   for(let r=0;r<8;r++){
@@ -331,8 +301,9 @@ function ai(){
   draw();
 }
 
-/* HIGHLIGHT MOVES */
+/* HIGHLIGHTS */
 function showMoves(r,c){
+
   clearHints();
 
   let cells=document.querySelectorAll(".cell");
@@ -360,15 +331,14 @@ function clearHints(){
 }
 
 function update(){
-  document.getElementById("status")=
-    document.getElementById("status").textContent =
+  document.getElementById("status").textContent =
     turn==="blue"?"Blue's turn":"Purple's turn";
 }
 
 function reset(){
   setup();
   turn="blue";
-  gameOver=false;
+  selected=null;
   draw();
 }
 

@@ -362,35 +362,32 @@ function createLink(target) {
     var newLink = new Link(origin, target);
     linksArray.push(newLink);
 
+    let playerJustMoved = turn;   // 🔥 FREEZE TURN HERE
+
     let squareCount = squaresArray.length;
-    checkForSquare(newLink);
+    checkForSquare(newLink, playerJustMoved);
+
     origin = null;
 
     if (squareCount === squaresArray.length) {
-
-        // No box made → switch turns
         turn = turn === 'p1' ? 'p2' : 'p1';
         document.querySelector('#turn').classList.toggle('p2-turn');
 
-        // AI's turn?
         if (mode === 1 && turn === "p2") {
             setTimeout(aiMove, 250);
         }
 
     } else {
 
-        // Box made → same player goes again
         if (mode === 1 && turn === "p2") {
             setTimeout(aiMove, 250);
         }
-
     }
-
 }
 
 // SQUARE HANDLING
 
-function checkForSquare(link) {
+function checkForSquare(link, player) {
 	// horizontal move
 	if (link.start.gy === link.end.gy) {
 		// check for square above
@@ -411,7 +408,7 @@ function checkForSquare(link) {
 			const lowerRight = linksArray.find(l => l.start.gy === link.end.gy && l.end.gy === link.end.gy + 1 && l.start.gx === link.end.gx);
 
 			if (lowerLeft && lowerBottom && lowerRight) {
-				squaresArray.push(new Square(lowerLeft.start.x, lowerLeft.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
+				squaresArray.push(new Square(lowerLeft.start.x, lowerLeft.start.y, DOT_SPACING, DOT_SPACING, colours[player]));
 			}
 		}
 	}
@@ -424,7 +421,7 @@ function checkForSquare(link) {
 			const leftBottom = linksArray.find(l => l.start.gx === link.end.gx - 1 && l.end.gx === link.end.gx && l.start.gy === link.end.gy);
 
 			if (leftTop && leftLeft && leftBottom) {
-				squaresArray.push(new Square(leftTop.start.x, leftTop.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
+				squaresArray.push(new Square(leftTop.start.x, leftTop.start.y, DOT_SPACING, DOT_SPACING, colours[player]));
 			}
 		}
 
@@ -435,7 +432,7 @@ function checkForSquare(link) {
 			const rightBottom = linksArray.find(l => l.start.gx === link.end.gx && l.end.gx === link.end.gx + 1 && l.start.gy === link.end.gy);
 
 			if (rightTop && rightRight && rightBottom) {
-				squaresArray.push(new Square(rightTop.start.x, rightTop.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
+				squaresArray.push(new Square(rightTop.start.x, rightTop.start.y, DOT_SPACING, DOT_SPACING, colours[player]));
 			}
 		}
 	}

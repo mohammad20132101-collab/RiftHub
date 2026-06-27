@@ -14,15 +14,14 @@ body{
   text-align:center;
 }
 
-/* ---------------- MENU ---------------- */
+/* MENU */
 #menu{
-  position:absolute;
-  width:100%;
-  height:100%;
-  background:#0f0f1a;
+  position:fixed;
+  inset:0;
   display:flex;
-  justify-content:center;
   align-items:center;
+  justify-content:center;
+  background:#0f0f1a;
 }
 
 .menuBox{
@@ -45,21 +44,107 @@ body{
   cursor:pointer;
   background:#4c6fff;
   color:white;
-  box-shadow:0 0 10px rgba(76,108,255,0.4);
 }
 
-/* ---------------- GAME ---------------- */
-#gameArea{
-  display:none;
-}
+/* GAME AREA */
+#gameArea{ display:none; }
 
 header{
   background:#1a1a2e;
   padding:15px;
   border-bottom:2px solid #4c6fff;
-  box-shadow:0 0 20px rgba(76,108,255,0.3);
 }
 
+/* SCORE */
+#score{
+  margin:10px;
+  font-weight:bold;
+}
+
+/* =========================
+   🔥 SOLID GRID ENGINE
+   ========================= */
+
+#game{
+  display:grid;
+  justify-content:center;
+  margin:20px auto;
+
+  /* FIXED BOARD SIZE */
+  grid-template-columns:repeat(7, 60px);
+  grid-template-rows:repeat(7, 60px);
+
+  gap:0;
+}
+
+/* EVERY CELL IS EXACT UNIT */
+.cell{
+  width:60px;
+  height:60px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+}
+
+/* DOTS */
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:white;
+  box-shadow:0 0 10px white;
+  margin:auto;
+}
+
+/* HORIZONTAL LINE */
+.hLine{
+  height:6px;
+  width:60px;
+  background:#2a2a40;
+  cursor:pointer;
+  transition:0.15s;
+}
+
+.hLine:hover{
+  background:#4c6fff;
+  box-shadow:0 0 10px #4c6fff;
+}
+
+/* VERTICAL LINE */
+.vLine{
+  width:6px;
+  height:60px;
+  background:#2a2a40;
+  cursor:pointer;
+  transition:0.15s;
+}
+
+.vLine:hover{
+  background:#4c6fff;
+  box-shadow:0 0 10px #4c6fff;
+}
+
+/* BOX */
+.box{
+  background:transparent;
+  font-weight:bold;
+  font-size:20px;
+}
+
+.box.blue{
+  background:rgba(76,108,255,0.25);
+  box-shadow:0 0 15px rgba(76,108,255,0.4);
+  color:#4c6fff;
+}
+
+.box.purple{
+  background:rgba(160,70,255,0.25);
+  box-shadow:0 0 15px rgba(160,70,255,0.4);
+  color:#a046ff;
+}
+
+/* BUTTONS */
 button{
   margin:5px;
   padding:8px 15px;
@@ -68,70 +153,6 @@ button{
   color:white;
   border-radius:6px;
   cursor:pointer;
-}
-
-/* GRID */
-#game{
-  display:grid;
-  justify-content:center;
-  margin-top:20px;
-  gap:0;
-}
-
-/* DOT */
-.dot{
-  width:14px;
-  height:14px;
-  background:white;
-  border-radius:50%;
-  box-shadow:0 0 10px rgba(255,255,255,0.6);
-  margin:auto;
-}
-
-/* LINE */
-.line{
-  background:#2a2a40;
-  cursor:pointer;
-  transition:0.2s;
-}
-
-.line:hover{
-  background:#4c6fff;
-  box-shadow:0 0 10px #4c6fff;
-}
-
-.h{ width:60px; height:6px; }
-.v{ width:6px; height:60px; }
-
-/* BOX */
-.box{
-  width:60px;
-  height:60px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:22px;
-  font-weight:bold;
-}
-
-.box.blue{
-  background:rgba(76,108,255,0.25);
-  border:1px solid #4c6fff;
-  box-shadow:0 0 15px rgba(76,108,255,0.5);
-  color:#4c6fff;
-}
-
-.box.purple{
-  background:rgba(160,70,255,0.25);
-  border:1px solid #a046ff;
-  box-shadow:0 0 15px rgba(160,70,255,0.5);
-  color:#a046ff;
-}
-
-/* SCORE */
-#score{
-  margin-top:10px;
-  font-weight:bold;
 }
 </style>
 </head>
@@ -153,176 +174,177 @@ button{
 
 <header>
   <h1>Rift Dots & Boxes</h1>
-  <p>Blue vs Purple</p>
 </header>
 
-<button onclick="resetGame()">Restart</button>
-<button onclick="location.reload()">Menu</button>
-
-<div id="score">Blue: 0 | Purple: 0 | Turn: Blue</div>
+<div id="score"></div>
 
 <div id="game"></div>
+
+<button onclick="reset()">Restart</button>
+<button onclick="location.reload()">Menu</button>
 
 </div>
 
 <script>
 
-const size = 4;
-
 let mode = 2;
 let current = "blue";
-let blueScore = 0;
-let purpleScore = 0;
+let blue = 0;
+let purple = 0;
 
-let hLines = [];
-let vLines = [];
-let boxes = [];
+const size = 3; // 3x3 boxes
 
 function startGame(m){
   mode = m;
   document.getElementById("menu").style.display="none";
   document.getElementById("gameArea").style.display="block";
-  buildGrid();
+  build();
 }
 
-/* ---------------- GRID ---------------- */
-function buildGrid(){
+/* =========================
+   BUILD SOLID GRID
+   ========================= */
 
-  const game = document.getElementById("game");
-  game.innerHTML="";
+function build(){
+
+  const g = document.getElementById("game");
+  g.innerHTML="";
 
   current="blue";
-  blueScore=0;
-  purpleScore=0;
+  blue=0;
+  purple=0;
 
-  hLines=[];
-  vLines=[];
-  boxes=[];
+  update();
 
-  updateScore();
+  // 7x7 for 3x3 boxes:
+  // D L D L D L D
+  // L B L B L B L
+  // D L D L D L D
+  // ...
 
-  const gridSize = size*2+1;
-  game.style.gridTemplateColumns = `repeat(${gridSize}, 60px)`;
-
-  for(let y=0;y<gridSize;y++){
-    for(let x=0;x<gridSize;x++){
+  for(let y=0;y<7;y++){
+    for(let x=0;x<7;x++){
 
       const cell=document.createElement("div");
+      cell.classList.add("cell");
 
-      if(x%2===0 && y%2===0){
-        cell.className="dot";
+      const isDot = x%2===0 && y%2===0;
+      const isBox = x%2===1 && y%2===1;
+      const isH = y%2===0 && x%2===1;
+      const isV = x%2===1 && y%2===0;
+
+      if(isDot){
+        const d=document.createElement("div");
+        d.className="dot";
+        cell.appendChild(d);
       }
 
-      else if(y%2===0){
-        cell.className="line h";
-        cell.dataset.x=x;
-        cell.dataset.y=y;
+      if(isH){
+        cell.classList.add("hLine");
         cell.onclick=()=>claim(cell);
-        hLines.push(cell);
       }
 
-      else if(x%2===0){
-        cell.className="line v";
-        cell.dataset.x=x;
-        cell.dataset.y=y;
+      if(isV){
+        cell.classList.add("vLine");
         cell.onclick=()=>claim(cell);
-        vLines.push(cell);
       }
 
-      else{
-        cell.className="box";
+      if(isBox){
+        cell.classList.add("box");
         cell.dataset.x=x;
         cell.dataset.y=y;
-        boxes.push(cell);
       }
 
-      game.appendChild(cell);
+      g.appendChild(cell);
     }
   }
 }
 
-/* ---------------- CLAIM LINE ---------------- */
-function claim(line){
+/* =========================
+   CLAIM LINE
+   ========================= */
 
-  if(line.classList.contains("claimed")) return;
+function claim(el){
+  if(el.classList.contains("claimed")) return;
 
-  line.classList.add("claimed");
-  line.style.background = current==="blue" ? "#4c6fff" : "#a046ff";
+  el.classList.add("claimed");
+  el.style.background = current==="blue" ? "#4c6fff" : "#a046ff";
 
-  let scored = checkBoxes();
+  checkBoxes();
 
-  if(!scored){
-    current = current==="blue" ? "purple" : "blue";
-  }
-
-  updateScore();
-
-  if(mode===1 && current==="purple"){
-    setTimeout(aiMove,300);
-  }
+  current = current==="blue" ? "purple" : "blue";
+  update();
 }
 
-/* ---------------- AI ---------------- */
-function aiMove(){
+/* =========================
+   BOX CHECK (clean)
+   ========================= */
 
-  let lines=[...hLines,...vLines].filter(l=>!l.classList.contains("claimed"));
-
-  if(lines.length===0) return;
-
-  let pick = lines[Math.floor(Math.random()*lines.length)];
-  claim(pick);
-}
-
-/* ---------------- BOX CHECK ---------------- */
 function checkBoxes(){
 
-  let scored=false;
+  const boxes = document.querySelectorAll(".box");
 
-  boxes.forEach(box=>{
+  boxes.forEach(b=>{
 
-    if(box.classList.contains("filled")) return;
+    if(b.classList.contains("done")) return;
 
-    const x=parseInt(box.dataset.x);
-    const y=parseInt(box.dataset.y);
+    const x = parseInt(b.dataset.x);
+    const y = parseInt(b.dataset.y);
 
-    const top=document.querySelector(`[data-x="${x}"][data-y="${y-1}"]`);
-    const bottom=document.querySelector(`[data-x="${x}"][data-y="${y+1}"]`);
-    const left=document.querySelector(`[data-x="${x-1}"][data-y="${y}"]`);
-    const right=document.querySelector(`[data-x="${x+1}"][data-y="${y}"]`);
+    const top = document.querySelector(`[style*="grid-area"]`);
+    const cells = document.querySelectorAll(".cell");
 
-    if(top?.classList.contains("claimed") &&
-       bottom?.classList.contains("claimed") &&
+    const index = Array.from(cells).indexOf(b);
+
+    const gridX = x;
+    const gridY = y;
+
+    const get = (dx,dy)=>{
+      return document.querySelector(
+        `.cell:nth-child(${(y+dy)*7 + (x+dx) + 1})`
+      );
+    };
+
+    const up = cells[index-7];
+    const down = cells[index+7];
+    const left = cells[index-1];
+    const right = cells[index+1];
+
+    if(up?.classList.contains("claimed") &&
+       down?.classList.contains("claimed") &&
        left?.classList.contains("claimed") &&
        right?.classList.contains("claimed")){
 
-      box.classList.add("filled");
+      b.classList.add("done");
 
       if(current==="blue"){
-        box.classList.add("blue");
-        box.textContent="B";
-        blueScore++;
+        b.classList.add("blue");
+        b.textContent="B";
+        blue++;
       }else{
-        box.classList.add("purple");
-        box.textContent="P";
-        purpleScore++;
+        b.classList.add("purple");
+        b.textContent="P";
+        purple++;
       }
-
-      scored=true;
     }
   });
-
-  return scored;
 }
 
-/* ---------------- SCORE ---------------- */
-function updateScore(){
+/* =========================
+   SCORE
+   ========================= */
+
+function update(){
   document.getElementById("score").textContent =
-  `Blue: ${blueScore} | Purple: ${purpleScore} | Turn: ${current.toUpperCase()}`;
+  `Blue: ${blue} | Purple: ${purple} | Turn: ${current.toUpperCase()}`;
 }
 
-/* ---------------- RESET ---------------- */
-function resetGame(){
-  buildGrid();
+/* =========================
+   RESET
+   ========================= */
+
+function reset(){
+  build();
 }
 
 </script>

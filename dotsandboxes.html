@@ -612,12 +612,16 @@ function aiMove(){
         let target = dotArray.find(p => p.gx === nx && p.gy === ny);
         if(!target) continue;
 
-        if(checkValidMove(target)){
-          moves.push({
-    from: dot,
-    to: target
-});
-        }
+        origin = dot;
+
+if(checkValidMove(target)){
+    moves.push({
+        from: dot,
+        to: target
+    });
+}
+
+origin = null;
       }
     }
   }

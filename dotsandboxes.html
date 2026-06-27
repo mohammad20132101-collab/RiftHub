@@ -102,7 +102,7 @@ label input {
 }
 
 canvas {
-  background-color: #0f0f1a;
+  background-color: white;
   border-radius: 5px;
   position: relative;
   z-index: 1;
@@ -249,7 +249,7 @@ function Dot(x, y, radius, gx, gy) {
   this.draw = function() {
     c.beginPath();
     c.arc(this.x, this.y, this.radius, Math.PI * 2, false);
-    c.fillStyle = 'white';
+    c.fillStyle = '#0f0f1a';
     c.fill();
   }
 

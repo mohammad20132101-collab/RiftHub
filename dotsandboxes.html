@@ -416,29 +416,30 @@ function checkForSquare(link) {
 		}
 	}
 	// vertical move
-	else {
-		// check for square to left
-		if (link.start.gx !== 0) {
-			const leftTop = linksArray.find(l => l.start.gx === link.start.gx - 1 && l.end.gx === link.start.gx && l.start.gy === link.start.gy);
-			const leftLeft = linksArray.find(l => l.start.gy === link.start.gy && l.end.gy === link.end.gy && l.start.gx === link.start.gx - 1);
-			const leftBottom = linksArray.find(l => l.start.gx === link.end.gx - 1 && l.end.gx === link.end.gx && l.start.gy === link.end.gy);
+	// vertical move
+else {
+    // check for square to left
+    if (link.start.gx !== 0) {
+        const leftTop = linksArray.find(l => l.start.gx === link.start.gx - 1 && l.end.gx === link.start.gx && l.start.gy === link.start.gy);
+        const leftLeft = linksArray.find(l => l.start.gy === link.start.gy && l.end.gy === link.end.gy && l.start.gx === link.start.gx - 1);
+        const leftBottom = linksArray.find(l => l.start.gx === link.start.gx - 1 && l.end.gx === link.start.gx && l.start.gy === link.end.gy);
 
-			if (leftTop && leftLeft && leftBottom) {
-				squaresArray.push(new Square(leftTop.start.x, leftTop.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
-			}
-		}
+        if (leftTop && leftLeft && leftBottom) {
+            squaresArray.push(new Square(leftLeft.start.x, leftLeft.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
+        }
+    }
 
-		// check for square to right
-		if (link.start.gx !== 0) {
-			const rightTop = linksArray.find(l => l.start.gx === link.start.gx && l.end.gx === link.start.gx + 1 && l.start.gy === link.start.gy);
-			const rightRight = linksArray.find(l => l.start.gy === link.start.gy && l.end.gy === link.end.gy && l.start.gx === link.start.gx + 1);
-			const rightBottom = linksArray.find(l => l.start.gx === link.end.gx && l.end.gx === link.end.gx + 1 && l.start.gy === link.end.gy);
+    // check for square to right
+    if (link.start.gx !== dotCount - 1) {
+        const rightTop = linksArray.find(l => l.start.gx === link.start.gx && l.end.gx === link.start.gx + 1 && l.start.gy === link.start.gy);
+        const rightRight = linksArray.find(l => l.start.gy === link.start.gy && l.end.gy === link.end.gy && l.start.gx === link.start.gx + 1);
+        const rightBottom = linksArray.find(l => l.start.gx === link.start.gx && l.end.gx === link.start.gx + 1 && l.start.gy === link.end.gy);
 
-			if (rightTop && rightRight && rightBottom) {
-				squaresArray.push(new Square(rightTop.start.x, rightTop.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
-			}
-		}
-	}
+        if (rightTop && rightRight && rightBottom) {
+            squaresArray.push(new Square(rightTop.start.x, rightTop.start.y, DOT_SPACING, DOT_SPACING, colours[turn]));
+        }
+    }
+}
 }
 
 // TRACK MOUSE

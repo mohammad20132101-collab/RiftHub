@@ -8,7 +8,7 @@
 <style>
 body{
   margin:0;
-  font-family:Arial;
+  font-family:Arial,sans-serif;
   background:#0f0f1a;
   color:white;
   text-align:center;
@@ -38,31 +38,35 @@ body{
   margin:10px;
   padding:10px 20px;
   border:none;
-  background:#4c6fff;
-  color:white;
   border-radius:8px;
   cursor:pointer;
+  background:#4c6fff;
+  color:white;
 }
 
 /* GAME */
 #gameArea{ display:none; }
 
+h1{
+  color:#4c6fff;
+  text-shadow:0 0 10px rgba(76,108,255,0.6);
+}
+
+/* SCORE */
 #score{
   margin:10px;
   font-weight:bold;
 }
 
+/* CANVAS FULL WIDTH */
 canvas{
   background:#050814;
   border:3px solid #4c6fff;
-
-  /* 🔥 FIX: full width, fixed height ratio */
-  width:95vw;
-  max-width:800px;
-  height:95vw;
-  max-height:800px;
-
   border-radius:12px;
+  width:95vw;
+  height:95vw;
+  max-width:700px;
+  max-height:700px;
 }
 </style>
 </head>
@@ -82,7 +86,7 @@ canvas{
 <!-- GAME -->
 <div id="gameArea">
 
-<h1 style="color:#4c6fff">Rift Dots & Boxes</h1>
+<h1>Rift Dots & Boxes</h1>
 <div id="score"></div>
 
 <canvas id="c"></canvas>
@@ -96,10 +100,17 @@ canvas{
 
 <script>
 
+/* ======================
+   CORE CONFIG (SMALLER GRID)
+   ====================== */
+
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-const GRID = 5;
+const GRID = 5; // smaller squares than before
+
+let size;
+let pad;
 
 let mode = 2;
 let turn = 0; // 0 blue, 1 purple
@@ -108,21 +119,17 @@ let purple = 0;
 
 let h, v, b;
 
-let CELL;
-
 /* ======================
-   FIXED CANVAS SIZE
+   RESPONSIVE FIX
    ====================== */
 
 function resize(){
-  const size = Math.min(window.innerWidth*0.95, 800);
-
+  size = Math.min(window.innerWidth * 0.9, 650);
   canvas.width = size;
   canvas.height = size;
 
-  CELL = canvas.width / GRID;
+  pad = size * 0.12; // keeps dots INSIDE border properly
 }
-
 window.addEventListener("resize", resize);
 resize();
 
@@ -140,11 +147,10 @@ function startGame(m){
 }
 
 /* ======================
-   INIT (clean state)
+   INIT GRID
    ====================== */
 
 function init(){
-
   h = Array(GRID+1).fill().map(()=>Array(GRID).fill(false));
   v = Array(GRID).fill().map(()=>Array(GRID+1).fill(false));
   b = Array(GRID).fill().map(()=>Array(GRID).fill(-1));
@@ -157,34 +163,41 @@ function init(){
 }
 
 /* ======================
-   CLICK (FIXED SNAP LOGIC)
+   GRID MATH (FIXED SNAP)
+   ====================== */
+
+function getCell(){
+  return (size - pad*2) / GRID;
+}
+
+/* ======================
+   INPUT (FIXED + CLEAN SNAP)
    ====================== */
 
 canvas.addEventListener("click", e=>{
 
+  const cell = getCell();
   const rect = canvas.getBoundingClientRect();
 
-  const x = (e.clientX - rect.left) / CELL;
-  const y = (e.clientY - rect.top) / CELL;
+  let x = (e.clientX - rect.left - pad) / cell;
+  let y = (e.clientY - rect.top - pad) / cell;
 
-  const gx = Math.round(x);
-  const gy = Math.round(y);
+  let gx = Math.round(x);
+  let gy = Math.round(y);
 
-  const dx = Math.abs(x - gx);
-  const dy = Math.abs(y - gy);
+  let dx = Math.abs(x - gx);
+  let dy = Math.abs(y - gy);
 
-  // must click CLOSE to grid point
+  // must be CLOSE to line intersection
   if(Math.max(dx,dy) > 0.35) return;
 
-  let scoredBefore = false;
-
-  let scored = false;
+  let placed = false;
 
   // horizontal
   if(dy < dx && gy <= GRID && gx < GRID){
     if(!h[gy][gx]){
       h[gy][gx] = true;
-      scored = checkBoxes();
+      placed = true;
     }
   }
 
@@ -192,10 +205,190 @@ canvas.addEventListener("click", e=>{
   else if(dx <= dy && gx <= GRID && gy < GRID){
     if(!v[gy][gx]){
       v[gy][gx] = true;
-      scored = checkBoxes();
+      placed = true;
     }
   }
 
-  /* ======================
-     FIX: TURN ONLY AFTER SCORE RESOLVED
-     =================
+  if(placed){
+    move();
+  }
+
+});
+
+/* ======================
+   MOVE FLOW (NO BUG SWAP)
+   ====================== */
+
+function move(){
+
+  let scored = checkBoxes();
+
+  if(!scored){
+    turn = 1 - turn;
+  }
+
+  update();
+  draw();
+
+  if(mode===1 && turn===1){
+    setTimeout(ai,150);
+  }
+}
+
+/* ======================
+   AI (ALWAYS PURPLE FIXED)
+   ====================== */
+
+function ai(){
+
+  let moves=[];
+
+  for(let y=0;y<=GRID;y++){
+    for(let x=0;x<GRID;x++){
+      if(!h[y][x]) moves.push(["h",x,y]);
+    }
+  }
+
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<=GRID;x++){
+      if(!v[y][x]) moves.push(["v",x,y]);
+    }
+  }
+
+  let m = moves[Math.floor(Math.random()*moves.length)];
+
+  if(m[0]==="h") h[m[2]][m[1]]=true;
+  else v[m[2]][m[1]]=true;
+
+  move();
+}
+
+/* ======================
+   BOX CHECK
+   ====================== */
+
+function checkBoxes(){
+
+  let scored=false;
+
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+
+      if(b[y][x]!==-1) continue;
+
+      if(
+        h[y][x] &&
+        h[y+1][x] &&
+        v[y][x] &&
+        v[y][x+1]
+      ){
+        b[y][x]=turn;
+
+        if(turn===0) blue++;
+        else purple++;
+
+        scored=true;
+      }
+    }
+  }
+
+  return scored;
+}
+
+/* ======================
+   DRAW (RIFT CLEAN STYLE)
+   ====================== */
+
+function draw(){
+
+  const cell = getCell();
+
+  ctx.fillStyle="#050814";
+  ctx.fillRect(0,0,size,size);
+
+  /* faint grid */
+  ctx.strokeStyle="rgba(255,255,255,0.05)";
+  for(let i=0;i<=GRID;i++){
+    ctx.beginPath();
+    ctx.moveTo(pad + i*cell, pad);
+    ctx.lineTo(pad + i*cell, size-pad);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(pad, pad + i*cell);
+    ctx.lineTo(size-pad, pad + i*cell);
+    ctx.stroke();
+  }
+
+  /* dots */
+  for(let y=0;y<=GRID;y++){
+    for(let x=0;x<=GRID;x++){
+      ctx.fillStyle="white";
+      ctx.beginPath();
+      ctx.arc(pad + x*cell, pad + y*cell, 3.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  /* lines */
+  for(let y=0;y<=GRID;y++){
+    for(let x=0;x<GRID;x++){
+      if(h[y][x]){
+        ctx.strokeStyle="#4c6fff";
+        ctx.lineWidth=3;
+        ctx.beginPath();
+        ctx.moveTo(pad + x*cell, pad + y*cell);
+        ctx.lineTo(pad + (x+1)*cell, pad + y*cell);
+        ctx.stroke();
+      }
+    }
+  }
+
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<=GRID;x++){
+      if(v[y][x]){
+        ctx.strokeStyle="#a046ff";
+        ctx.lineWidth=3;
+        ctx.beginPath();
+        ctx.moveTo(pad + x*cell, pad + y*cell);
+        ctx.lineTo(pad + x*cell, pad + (y+1)*cell);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* boxes */
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+
+      if(b[y][x]===0){
+        ctx.fillStyle="rgba(76,108,255,0.25)";
+        ctx.fillRect(pad + x*cell, pad + y*cell, cell, cell);
+      }
+
+      if(b[y][x]===1){
+        ctx.fillStyle="rgba(160,70,255,0.25)";
+        ctx.fillRect(pad + x*cell, pad + y*cell, cell, cell);
+      }
+    }
+  }
+}
+
+/* ======================
+   UI
+   ====================== */
+
+function update(){
+  document.getElementById("score").textContent =
+  `Blue: ${blue} | Purple: ${purple} | Turn: ${turn===0?"Blue":"Purple"}`;
+}
+
+function reset(){
+  init();
+  draw();
+}
+
+</script>
+
+</body>
+</html>

@@ -358,23 +358,34 @@ function checkValidMove(target) {
 }
 
 function createLink(target) {
-	var newLink = new Link(origin, target);
-  linksArray.push(newLink);
 
-	let squareCount = squaresArray.length;
-	checkForSquare(newLink);
-  origin = null;
+    var newLink = new Link(origin, target);
+    linksArray.push(newLink);
 
-	// only change player turn if new square wasn't added
-	if (squareCount === squaresArray.length) {
-  turn = turn === 'p1' ? 'p2' : 'p1';
-  document.querySelector('#turn').classList.toggle('p2-turn');
+    let squareCount = squaresArray.length;
+    checkForSquare(newLink);
+    origin = null;
 
-  // 👉 AI TURN (only in 1 player mode)
-  if(mode === 1 && turn === 'p2'){
-    setTimeout(aiMove, 250);
-  }
-}
+    if (squareCount === squaresArray.length) {
+
+        // No box made → switch turns
+        turn = turn === 'p1' ? 'p2' : 'p1';
+        document.querySelector('#turn').classList.toggle('p2-turn');
+
+        // AI's turn?
+        if (mode === 1 && turn === "p2") {
+            setTimeout(aiMove, 250);
+        }
+
+    } else {
+
+        // Box made → same player goes again
+        if (mode === 1 && turn === "p2") {
+            setTimeout(aiMove, 250);
+        }
+
+    }
+
 }
 
 // SQUARE HANDLING

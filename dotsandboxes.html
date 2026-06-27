@@ -46,79 +46,25 @@ body{
 /* GAME */
 #gameArea{ display:none; }
 
-h1{ color:#4c6fff; }
+h1{
+  color:#4c6fff;
+  text-shadow:0 0 10px rgba(76,108,255,0.5);
+}
 
 #score{
   margin:10px;
   font-weight:bold;
 }
 
-/* BOARD */
-#board{
-  display:grid;
-  justify-content:center;
-  margin:auto;
-  width:95vw;
-  max-width:650px;
-
-  /* GRID SIZE */
-  grid-template-columns:repeat(9, 1fr);
-  grid-auto-rows:60px;
-  gap:0;
+/* CANVAS */
+canvas{
   background:#050814;
   border:3px solid #4c6fff;
   border-radius:12px;
-  padding:10px;
-}
-
-/* DOT */
-.dot{
-  background:transparent;
-  position:relative;
-}
-
-/* LINE CELLS */
-.h-line, .v-line{
-  background:rgba(255,255,255,0.03);
-  cursor:pointer;
-  transition:0.1s;
-}
-
-.h-line:hover, .v-line:hover{
-  background:rgba(76,108,255,0.2);
-}
-
-/* FILLED LINES */
-.blue{
-  background:#4c6fff !important;
-}
-
-.purple{
-  background:#a046ff !important;
-}
-
-/* BOXES */
-.box{
-  background:transparent;
-}
-
-.box.blue{
-  background:rgba(76,108,255,0.2);
-}
-
-.box.purple{
-  background:rgba(160,70,255,0.2);
-}
-
-/* BUTTONS (your style) */
-button{
-  margin:5px;
-  padding:8px 15px;
-  border:none;
-  background:#4c6fff;
-  color:white;
-  border-radius:6px;
-  cursor:pointer;
+  width:95vw;
+  height:95vw;
+  max-width:650px;
+  max-height:650px;
 }
 </style>
 </head>
@@ -140,7 +86,7 @@ button{
 <h1>Rift Dots & Boxes</h1>
 <div id="score"></div>
 
-<div id="board"></div>
+<canvas id="c"></canvas>
 
 <div>
   <button onclick="reset()">Restart</button>
@@ -150,169 +96,122 @@ button{
 
 <script>
 
-/* ======================
-   PURE DOM ENGINE (NO MATH BUGS)
-   ====================== */
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
 
-const board = document.getElementById("board");
+const GRID = 5;
 
-const N = 4; // boxes per row
+let size, pad, cell;
 
 let mode = 2;
 let turn = 0; // 0 blue, 1 purple
 let blue = 0;
 let purple = 0;
 
-/* STATE */
-let h = [];
-let v = [];
-let boxes = [];
+let h, v, b;
 
-/* ======================
-   INIT
-   ====================== */
+/* ---------------- RESIZE ---------------- */
+
+function resize(){
+  size = Math.min(window.innerWidth * 0.9, 650);
+  c.width = size;
+  c.height = size;
+
+  pad = size * 0.12;
+  cell = (size - pad*2) / GRID;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ---------------- START ---------------- */
 
 function startGame(m){
   mode = m;
   document.getElementById("menu").style.display="none";
   document.getElementById("gameArea").style.display="block";
 
-  setup();
-  render();
-  update();
+  init();
+  draw();
 }
 
-function setup(){
-  h = Array(N+1).fill().map(()=>Array(N).fill(null));
-  v = Array(N).fill().map(()=>Array(N+1).fill(null));
-  boxes = Array(N).fill().map(()=>Array(N).fill(null));
+/* ---------------- INIT ---------------- */
+
+function init(){
+  h = Array(GRID+1).fill().map(()=>Array(GRID).fill(false));
+  v = Array(GRID).fill().map(()=>Array(GRID+1).fill(false));
+  b = Array(GRID).fill().map(()=>Array(GRID).fill(-1));
 
   turn = 0;
   blue = 0;
   purple = 0;
+
+  update();
 }
 
-/* ======================
-   BUILD GRID (FIXED CELLS)
-   ====================== */
+/* ---------------- CLICK (FIXED PROPER SNAP) ---------------- */
 
-function render(){
-  board.innerHTML="";
+c.addEventListener("click", e=>{
 
-  for(let y=0;y<2*N+1;y++){
-    for(let x=0;x<2*N+1;x++){
+  const rect = c.getBoundingClientRect();
 
-      // DOTS
-      if(x%2===0 && y%2===0){
-        let d=document.createElement("div");
-        d.className="dot";
-        board.appendChild(d);
-      }
+  let x = (e.clientX - rect.left - pad) / cell;
+  let y = (e.clientY - rect.top - pad) / cell;
 
-      // HORIZONTAL LINES
-      else if(y%2===0){
-        let hx=(x-1)/2;
-        let hy=y/2;
+  let gx = Math.round(x);
+  let gy = Math.round(y);
 
-        let el=document.createElement("div");
-        el.className="h-line";
+  let dx = Math.abs(x - gx);
+  let dy = Math.abs(y - gy);
 
-        if(h[hy][hx]) el.classList.add(h[hy][hx]);
+  if(Math.max(dx,dy) > 0.35) return;
 
-        el.onclick=()=>placeH(hy,hx,el);
+  let placed = false;
 
-        board.appendChild(el);
-      }
-
-      // VERTICAL LINES
-      else if(x%2===0){
-        let vx=x/2;
-        let vy=(y-1)/2;
-
-        let el=document.createElement("div");
-        el.className="v-line";
-
-        if(v[vy][vx]) el.classList.add(v[vy][vx]);
-
-        el.onclick=()=>placeV(vy,vx,el);
-
-        board.appendChild(el);
-      }
-
-      // BOXES
-      else{
-        let bx=(x-1)/2;
-        let by=(y-1)/2;
-
-        let el=document.createElement("div");
-        el.className="box";
-
-        if(boxes[by][bx]===0) el.classList.add("blue");
-        if(boxes[by][bx]===1) el.classList.add("purple");
-
-        board.appendChild(el);
-      }
+  // horizontal
+  if(dy < dx && gy >= 0 && gy <= GRID && gx < GRID){
+    if(!h[gy][gx]){
+      h[gy][gx] = true;
+      placed = true;
     }
   }
-}
 
-/* ======================
-   PLACE H LINE
-   ====================== */
+  // vertical
+  else if(dx <= dy && gx >= 0 && gx <= GRID && gy < GRID){
+    if(!v[gy][gx]){
+      v[gy][gx] = true;
+      placed = true;
+    }
+  }
 
-function placeH(y,x,el){
+  if(placed){
+    nextTurn();
+  }
+});
 
-  if(h[y][x]!==null) return;
+/* ---------------- TURN SYSTEM (FIXED FOREVER) ---------------- */
 
-  h[y][x]=turn;
+function nextTurn(){
 
-  el.classList.add(turn===0?"blue":"purple");
-
-  next();
-}
-
-/* ======================
-   PLACE V LINE
-   ====================== */
-
-function placeV(y,x,el){
-
-  if(v[y][x]!==null) return;
-
-  v[y][x]=turn;
-
-  el.classList.add(turn===0?"blue":"purple");
-
-  next();
-}
-
-/* ======================
-   TURN SYSTEM (IMPOSSIBLE TO DESYNC NOW)
-   ====================== */
-
-function next(){
-
-  let scored=checkBoxes();
+  let scored = checkBoxes();
 
   if(!scored){
     turn = 1 - turn;
   }
 
   update();
+  draw();
 }
 
-/* ======================
-   BOX CHECK
-   ====================== */
+/* ---------------- BOX CHECK ---------------- */
 
 function checkBoxes(){
 
   let scored=false;
 
-  for(let y=0;y<N;y++){
-    for(let x=0;x<N;x++){
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
 
-      if(boxes[y][x]!==null) continue;
+      if(b[y][x]!==-1) continue;
 
       if(
         h[y][x] &&
@@ -320,7 +219,7 @@ function checkBoxes(){
         v[y][x] &&
         v[y][x+1]
       ){
-        boxes[y][x]=turn;
+        b[y][x]=turn;
 
         if(turn===0) blue++;
         else purple++;
@@ -330,14 +229,86 @@ function checkBoxes(){
     }
   }
 
-  if(scored) render();
-
   return scored;
 }
 
-/* ======================
-   UI
-   ====================== */
+/* ---------------- DRAW ---------------- */
+
+function draw(){
+
+  ctx.fillStyle="#050814";
+  ctx.fillRect(0,0,size,size);
+
+  /* faint grid */
+  ctx.strokeStyle="rgba(255,255,255,0.05)";
+  for(let i=0;i<=GRID;i++){
+    ctx.beginPath();
+    ctx.moveTo(pad + i*cell, pad);
+    ctx.lineTo(pad + i*cell, size-pad);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(pad, pad + i*cell);
+    ctx.lineTo(size-pad, pad + i*cell);
+    ctx.stroke();
+  }
+
+  /* dots */
+  for(let y=0;y<=GRID;y++){
+    for(let x=0;x<=GRID;x++){
+      ctx.fillStyle="white";
+      ctx.beginPath();
+      ctx.arc(pad + x*cell, pad + y*cell, 3.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  /* H lines */
+  for(let y=0;y<=GRID;y++){
+    for(let x=0;x<GRID;x++){
+      if(h[y][x]){
+        ctx.strokeStyle="#4c6fff";
+        ctx.lineWidth=3;
+        ctx.beginPath();
+        ctx.moveTo(pad + x*cell, pad + y*cell);
+        ctx.lineTo(pad + (x+1)*cell, pad + y*cell);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* V lines */
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<=GRID;x++){
+      if(v[y][x]){
+        ctx.strokeStyle="#a046ff";
+        ctx.lineWidth=3;
+        ctx.beginPath();
+        ctx.moveTo(pad + x*cell, pad + y*cell);
+        ctx.lineTo(pad + x*cell, pad + (y+1)*cell);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* boxes */
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+
+      if(b[y][x]===0){
+        ctx.fillStyle="rgba(76,108,255,0.2)";
+        ctx.fillRect(pad + x*cell, pad + y*cell, cell, cell);
+      }
+
+      if(b[y][x]===1){
+        ctx.fillStyle="rgba(160,70,255,0.2)";
+        ctx.fillRect(pad + x*cell, pad + y*cell, cell, cell);
+      }
+    }
+  }
+}
+
+/* ---------------- UI ---------------- */
 
 function update(){
   document.getElementById("score").textContent =
@@ -345,9 +316,8 @@ function update(){
 }
 
 function reset(){
-  setup();
-  render();
-  update();
+  init();
+  draw();
 }
 
 </script>

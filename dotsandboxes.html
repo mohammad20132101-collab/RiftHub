@@ -613,7 +613,10 @@ function aiMove(){
         if(!target) continue;
 
         if(checkValidMove(target)){
-          moves.push(target);
+          moves.push({
+    from: dot,
+    to: target
+});
         }
       }
     }
@@ -621,10 +624,10 @@ function aiMove(){
 
   if(moves.length === 0) return;
 
-  let choice = moves[Math.floor(Math.random() * moves.length)];
+ let choice = moves[Math.floor(Math.random() * moves.length)];
 
-  origin = dotArray.find(d => d.gx === choice.gx && d.gy === choice.gy);
-  createLink(choice);
+origin = choice.from;
+createLink(choice.to);
 }
 </script>
 

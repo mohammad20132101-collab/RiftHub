@@ -288,11 +288,10 @@ function draw() {
       cell.style.color = "white";
       cell.style.textShadow = `0 0 12px ${getColour('p1')}, 0 0 2px white`;
     }
-    if (v === "O") {
+if (v === "O") {
       cell.textContent = "○";
       cell.style.color = "white";
       cell.style.textShadow = `0 0 12px ${getColour('p2')}, 0 0 2px white`;
-    }l.style.textShadow = `0 0 12px ${getColour('p2')}`;
     }
     cell.onclick = () => move(i);
     b.appendChild(cell);

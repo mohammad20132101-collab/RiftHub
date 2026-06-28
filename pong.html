@@ -12,7 +12,7 @@ body {
     background: #0f0f1a;
     color: white;
     text-align: center;
-    overflow: hidden; /* 🔥 stops scroll issues */
+    overflow: hidden;
 }
 
 header {
@@ -38,10 +38,6 @@ button {
     cursor: pointer;
 }
 
-#score {
-    font-size: 26px;
-    margin: 10px;
-}
 #startScreen{
     position:fixed;
     inset:0;
@@ -82,50 +78,44 @@ button {
     margin-top:15px;
     font-size:20px;
 }
-    #backBtn{
-    position:absolute;
-    top:15px;
-    left:15px;
-    background:#4c6fff;
-    color:white;
-    border:none;
-    padding:10px 15px;
-    border-radius:8px;
-    cursor:pointer;
-    z-index:1000;
-}
 </style>
 </head>
 
 <body>
 
 <header>
-<h1>🏓Pong</h1>
+  <h1>🏓 Rift Pong</h1>
 </header>
+
 <div>
-    <button onclick="goBack()">⬅ Back</button>
-    <button onclick="location.reload()">Menu</button>
+  <button onclick="window.location.href='index.html'">⬅ Back</button>
+  <button onclick="location.reload()">Menu</button>
 </div>
+
 <div id="startScreen">
-    <div id="menu">
+  <div id="menu">
     <h1>Rift Pong</h1>
-        <p>Select Mode</p>
-
-        <button onclick="chooseMode(1)" class="modeBtn" id="mode1">
-            🤖 1 Player
-        </button>
-
-        <button onclick="chooseMode(2)" class="modeBtn" id="mode2">
-            👥 2 Players
-        </button>
-
-        <button onclick="startGame()" id="startBtn">
-            ▶ Start Game
-        </button>
-    </div>
+    <p>Select Mode</p>
+    <button onclick="chooseMode(1)" class="modeBtn" id="mode1">🤖 1 Player</button>
+    <button onclick="chooseMode(2)" class="modeBtn" id="mode2">👥 2 Players</button>
+    <button onclick="startGame()" id="startBtn">▶ Start Game</button>
+  </div>
 </div>
 
-<div id="score">0 : 0</div>
+<div style="display:flex;justify-content:center;align-items:center;gap:60px;margin:8px 0;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span contenteditable="true" id="p1Name"
+      onkeydown="if(event.key==='Enter')event.preventDefault(); if(this.textContent.length>=12 && event.key.length===1)event.preventDefault()"
+      style="color:#ffc;font:18px Lato;white-space:nowrap;overflow:hidden;outline:none;cursor:text;min-width:20px;">Player 1</span>
+    <span id="p1Score" style="color:#ffc;font:bold 22px Arial;">0</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="p2Score" style="color:#ffc;font:bold 22px Arial;">0</span>
+    <span contenteditable="true" id="p2Name"
+      onkeydown="if(event.key==='Enter')event.preventDefault(); if(this.textContent.length>=12 && event.key.length===1)event.preventDefault()"
+      style="color:#ffc;font:18px Lato;white-space:nowrap;overflow:hidden;outline:none;cursor:text;min-width:20px;">Player 2</span>
+  </div>
+</div>
 
 <canvas id="game" width="900" height="500"></canvas>
 
@@ -155,7 +145,6 @@ const ball = {
 
 const keys = {};
 
-// ✅ FIX 1: stop arrow keys scrolling page
 document.addEventListener("keydown", e => {
     const blocked = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "];
     if (blocked.includes(e.key)) e.preventDefault();
@@ -166,78 +155,63 @@ document.addEventListener("keyup", e => {
     keys[e.key] = false;
 });
 
-function goBack() {
-    window.location.href = "index.html";
-}
-
-function setMode(m) {
-    mode = m;
-}
 function chooseMode(m){
     mode = m;
-
-    document
-        .querySelectorAll(".modeBtn")
-        .forEach(btn => btn.classList.remove("selected"));
-
-    document
-        .getElementById(m === 1 ? "mode1" : "mode2")
-        .classList.add("selected");
+    document.querySelectorAll(".modeBtn").forEach(btn => btn.classList.remove("selected"));
+    document.getElementById(m === 1 ? "mode1" : "mode2").classList.add("selected");
 }
 
 function startGame(){
     gameStarted = true;
     document.getElementById("startScreen").style.display = "none";
+    if (mode === 1) {
+        document.getElementById('p1Name').textContent = 'AI';
+        document.getElementById('p1Name').contentEditable = 'false';
+        document.getElementById('p2Name').textContent = 'Player 1';
+        document.getElementById('p2Name').contentEditable = 'true';
+    } else {
+        document.getElementById('p1Name').textContent = 'Player 1';
+        document.getElementById('p1Name').contentEditable = 'true';
+        document.getElementById('p2Name').textContent = 'Player 2';
+        document.getElementById('p2Name').contentEditable = 'true';
+    }
 }
 
 function resetBall(dir = 1) {
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
-
     ball.vx = 6 * dir;
     ball.vy = (Math.random() * 6 - 3);
-
     ball.bounceCount = 0;
 }
 
-// simple AI (no difficulty system)
 function aiMove() {
     let speed = 4;
     let center = left.y + paddleHeight / 2;
-
     if (center < ball.y - 20) left.y += speed;
     else if (center > ball.y + 20) left.y -= speed;
 }
 
-// REALISTIC bounce
 function bounce(paddle, isLeft) {
     let hit = ball.y - (paddle.y + paddleHeight / 2);
     hit = hit / (paddleHeight / 2);
-
     let angle = hit * 0.75;
-
     let dir = isLeft ? 1 : -1;
-
     ball.vx = dir * Math.abs(ball.vx);
     ball.vy = angle * 6;
-
-    // speed increase
     ball.vx *= 1.04;
     ball.vy *= 1.04;
-
-    // clamp speed
     let speed = Math.sqrt(ball.vx**2 + ball.vy**2);
     if (speed > ball.maxSpeed) {
         ball.vx *= ball.maxSpeed / speed;
         ball.vy *= ball.maxSpeed / speed;
     }
-
     ball.bounceCount++;
 }
 
 function update() {
-    if(!gameStarted) return;
-    // paddles
+    if (!gameStarted) return;
+
     if (keys["ArrowUp"]) right.y -= right.speed;
     if (keys["ArrowDown"]) right.y += right.speed;
 
@@ -254,15 +228,11 @@ function update() {
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    // wall bounce
     if (ball.y <= ball.radius || ball.y >= canvas.height - ball.radius) {
         ball.vy *= -1;
-
-        // 🔥 FIX 2: prevent infinite vertical loops
         ball.vy *= 0.98;
     }
 
-    // paddle collisions
     if (
         ball.x - ball.radius <= left.x + paddleWidth &&
         ball.y >= left.y &&
@@ -279,12 +249,10 @@ function update() {
         bounce(right, false);
     }
 
-    // 🔥 FIX 2 continued: stuck detection reset
     if (ball.bounceCount > 30) {
         resetBall(ball.vx > 0 ? -1 : 1);
     }
 
-    // scoring resets everything (fixes “stuck ball problem”)
     if (ball.x < 0) {
         right.score++;
         resetBall(1);
@@ -295,42 +263,42 @@ function update() {
         resetBall(-1);
     }
 
-    document.getElementById("score").textContent =
-        left.score + " : " + right.score;
+    document.getElementById("p1Score").textContent = left.score;
+    document.getElementById("p2Score").textContent = right.score;
 }
 
 function draw() {
-
-    // trail effect
     ctx.fillStyle = "rgba(20,20,40,0.25)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // center line
-    ctx.setLineDash([10,10]);
+    ctx.setLineDash([10, 10]);
     ctx.strokeStyle = "#4c6fff";
     ctx.beginPath();
-    ctx.moveTo(canvas.width/2,0);
-    ctx.lineTo(canvas.width/2,canvas.height);
+    ctx.moveTo(canvas.width / 2, 0);
+    ctx.lineTo(canvas.width / 2, canvas.height);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // paddles
     ctx.fillStyle = "#4c6fff";
-    ctx.fillRect(left.x,left.y,paddleWidth,paddleHeight);
-    ctx.fillRect(right.x,right.y,paddleWidth,paddleHeight);
+    ctx.fillRect(left.x, left.y, paddleWidth, paddleHeight);
+    ctx.fillRect(right.x, right.y, paddleWidth, paddleHeight);
 
-    // ball glow
     ctx.shadowBlur = 15;
     ctx.shadowColor = "white";
-
     ctx.beginPath();
-    ctx.arc(ball.x,ball.y,ball.radius,0,Math.PI*2);
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     ctx.fillStyle = "white";
     ctx.fill();
-
     ctx.shadowBlur = 0;
 }
+
 chooseMode(1);
+
+document.getElementById('p1Name').addEventListener('focus', () => gameStarted = false);
+document.getElementById('p1Name').addEventListener('blur', () => { if(document.getElementById('startScreen').style.display === 'none') gameStarted = true; });
+document.getElementById('p2Name').addEventListener('focus', () => gameStarted = false);
+document.getElementById('p2Name').addEventListener('blur', () => { if(document.getElementById('startScreen').style.display === 'none') gameStarted = true; });
+
 function loop() {
     update();
     draw();

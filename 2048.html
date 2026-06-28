@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rift 2048</title>
-
 <style>
 body{
     margin:0;
@@ -13,12 +12,8 @@ body{
     color:white;
     text-align:center;
 }
+h1{ color:#4c6fff; }
 
-h1{
-    color:#4c6fff;
-}
-
-/* GAME BOARD */
 #game{
     display:grid;
     grid-template-columns:repeat(4,90px);
@@ -30,9 +25,9 @@ h1{
     border-radius:15px;
     border:3px solid #4c6fff;
     box-shadow:0 0 20px #4c6fff55;
+    position:relative;
 }
 
-/* TILE */
 .tile{
     width:90px;
     height:90px;
@@ -43,17 +38,21 @@ h1{
     font-weight:bold;
     font-size:20px;
     transition:0.12s;
+    position:relative;
 }
 
-/* pop effect */
-.pop{
-    animation:pop 0.15s ease;
-}
-
+.pop{ animation:pop 0.15s ease; }
 @keyframes pop{
     0%{transform:scale(0.7);}
     60%{transform:scale(1.2);}
     100%{transform:scale(1);}
+}
+
+.vanish{ animation:vanish 0.3s ease forwards; }
+@keyframes vanish{
+    0%{transform:scale(1);opacity:1;}
+    50%{transform:scale(1.4);opacity:0.6;}
+    100%{transform:scale(0);opacity:0;}
 }
 
 button{
@@ -65,191 +64,291 @@ button{
     color:white;
     margin:5px;
 }
-button:hover{
-    background:#9b5cff;
+button:hover{ background:#9b5cff; }
+
+#scoreBox{
+    display:inline-block;
+    background:#141428;
+    border:2px solid #4c6fff;
+    padding:8px 20px;
+    border-radius:10px;
+    margin:10px;
+    font-size:18px;
 }
 </style>
 </head>
-
 <body>
 
 <h1>🌀 Rift 2048</h1>
-
+<div id="scoreBox">Score: <span id="score">0</span></div>
+<br>
 <button onclick="restart()">Restart</button>
 <button onclick="undo()">Undo</button>
 <button onclick="window.location.href='index.html'">Back</button>
 <div id="game"></div>
+<p style="color:#888;font-size:13px;margin-top:10px;">
+  Special tiles: <b style="color:#ff6b6b">½</b> halves a number • <b style="color:#ff4444">¼</b> divides by 4 • <b style="color:#6bff6b">×2</b> doubles a number • <b style="color:#44ff44">×4</b> quadruples • ½+½=¼ • ×2+×2=×4 • ½+×2=💥
+</p>
 
 <script>
-
 let board;
-let history=[];
+let history = [];
+let scoreVal = 0;
+let won = false;
 
-// INIT
 function init(){
-    board = Array(4).fill().map(()=>Array(4).fill(0));
+    board = Array(4).fill(null).map(()=>Array(4).fill(null));
+    scoreVal = 0;
+    won = false;
+    updateScore();
     addTile();
     addTile();
     draw();
 }
 
-// SPAWN
+function updateScore(){
+    document.getElementById('score').textContent = scoreVal;
+}
+
+function spawnTile(){
+    const r = Math.random() * 100;
+    if(r < 75)        return {type:'num', val:2};
+    else if(r < 90)   return {type:'num', val:4};
+    else if(r < 94.5) return {type:'half'};
+    else if(r < 99)   return {type:'x2'};
+    else              return {type:'num', val:8};
+}
+
 function addTile(){
-    let empty=[];
-    for(let r=0;r<4;r++){
-        for(let c=0;c<4;c++){
-            if(board[r][c]===0) empty.push({r,c});
-        }
-    }
-
+    let empty = [];
+    for(let r=0;r<4;r++)
+        for(let c=0;c<4;c++)
+            if(!board[r][c]) empty.push({r,c});
     if(!empty.length) return;
-
     let spot = empty[Math.floor(Math.random()*empty.length)];
-    board[spot.r][spot.c] = Math.random()<0.9 ? 2 : 4;
+    board[spot.r][spot.c] = spawnTile();
 }
 
-// 🌈 UNIQUE RIFT COLOR SYSTEM PER NUMBER
-function color(val){
-
-    const map = {
-        2:"#1a1a2e",
-        4:"#16213e",
-        8:"#0f3460",
-        16:"#1f6feb",
-        32:"#4c6fff",
-        64:"#6a5cff",
-        128:"#8a4dff",
-        256:"#a855ff",
-        512:"#c084ff",
-        1024:"#00c2ff",
-        2048:"#ffffff"
-    };
-
-    return map[val] || "#0f0f1a";
+function tileStyle(t){
+    if(!t) return {bg:'#1a1a2e', color:'#fff', label:''};
+    if(t.type==='num'){
+        const map = {
+            1:{bg:'#0a0a1a'},
+            2:{bg:'#1a1a2e'},4:{bg:'#16213e'},8:{bg:'#0f3460'},
+            16:{bg:'#1f6feb'},32:{bg:'#4c6fff'},64:{bg:'#6a5cff'},
+            128:{bg:'#8a4dff'},256:{bg:'#a855ff'},512:{bg:'#c084ff'},
+            1024:{bg:'#00c2ff'},2048:{bg:'#ffffff',color:'#000'}
+        };
+        const s = map[t.val] || {bg:'#0f0f1a'};
+        return {bg: s.bg, color: s.color||'#fff', label: String(t.val), glow: t.val>=32};
+    }
+    if(t.type==='half')    return {bg:'#2d1b1b', color:'#ff6b6b', label:'½', glow:false};
+    if(t.type==='quarter') return {bg:'#3d1010', color:'#ff4444', label:'¼', glow:false};
+    if(t.type==='x2')      return {bg:'#1b2d1b', color:'#6bff6b', label:'×2', glow:false};
+    if(t.type==='x4')      return {bg:'#103d10', color:'#44ff44', label:'×4', glow:false};
+    return {bg:'#1a1a2e', color:'#fff', label:'?'};
 }
 
-// DRAW
 function draw(){
-
-    const game = document.getElementById("game");
-    game.innerHTML="";
-
+    const game = document.getElementById('game');
+    game.innerHTML = '';
     for(let r=0;r<4;r++){
         for(let c=0;c<4;c++){
-
-            let val = board[r][c];
-
-            let tile = document.createElement("div");
-            tile.className="tile";
-            tile.textContent = val ? val : "";
-
-            tile.style.background = color(val);
-
-            // text contrast
-            tile.style.color = (val>=128) ? "#000" : "#fff";
-
-            // glow for high values
-            if(val>=32){
-                tile.style.boxShadow = "0 0 12px rgba(76,108,255,0.5)";
-            }
-
-            game.appendChild(tile);
+            const t = board[r][c];
+            const s = tileStyle(t);
+            const div = document.createElement('div');
+            div.className = 'tile';
+            div.style.background = s.bg;
+            div.style.color = s.color;
+            div.textContent = s.label;
+            if(s.glow) div.style.boxShadow = '0 0 12px rgba(76,108,255,0.5)';
+            game.appendChild(div);
         }
     }
 }
 
-// SLIDE LOGIC
-function slide(row){
-
-    row = row.filter(x=>x!==0);
-
-    for(let i=0;i<row.length-1;i++){
-        if(row[i]===row[i+1]){
-            row[i]*=2;
-            row[i+1]=0;
-        }
-    }
-
-    row = row.filter(x=>x!==0);
-
-    while(row.length<4) row.push(0);
-
-    return row;
+function canMerge(a, b){
+    if(!a || !b) return false;
+    // same number
+    if(a.type==='num' && b.type==='num' && a.val===b.val) return true;
+    // half + half = quarter
+    if(a.type==='half' && b.type==='half') return true;
+    // x2 + x2 = x4
+    if(a.type==='x2' && b.type==='x2') return true;
+    // half + x2 = vanish
+    if((a.type==='half'&&b.type==='x2')||(a.type==='x2'&&b.type==='half')) return true;
+    // half + number (only if result >= 1)
+    if(a.type==='half' && b.type==='num' && Math.floor(b.val/2) >= 1) return true;
+    if(a.type==='num' && b.type==='half' && Math.floor(a.val/2) >= 1) return true;
+    // quarter + number (only if result >= 1)
+    if(a.type==='quarter' && b.type==='num' && Math.floor(b.val/4) >= 1) return true;
+    if(a.type==='num' && b.type==='quarter' && Math.floor(a.val/4) >= 1) return true;
+    // x2 + number
+    if(a.type==='x2' && b.type==='num') return true;
+    if(a.type==='num' && b.type==='x2') return true;
+    // x4 + number
+    if(a.type==='x4' && b.type==='num') return true;
+    if(a.type==='num' && b.type==='x4') return true;
+    return false;
 }
 
-// MOVES
+function mergeResult(a, b){
+    if(a.type==='num' && b.type==='num') return {type:'num', val:a.val*2};
+    if(a.type==='half' && b.type==='half') return {type:'quarter'};
+    if(a.type==='x2' && b.type==='x2') return {type:'x4'};
+    if((a.type==='half'&&b.type==='x2')||(a.type==='x2'&&b.type==='half')) return null;
+    // half + number
+    if(a.type==='half' && b.type==='num'){
+        const v = Math.floor(b.val/2);
+        return v>=1 ? {type:'num',val:v} : null;
+    }
+    if(a.type==='num' && b.type==='half'){
+        const v = Math.floor(a.val/2);
+        return v>=1 ? {type:'num',val:v} : null;
+    }
+    // quarter + number
+    if(a.type==='quarter' && b.type==='num'){
+        const v = Math.floor(b.val/4);
+        return v>=1 ? {type:'num',val:v} : null;
+    }
+    if(a.type==='num' && b.type==='quarter'){
+        const v = Math.floor(a.val/4);
+        return v>=1 ? {type:'num',val:v} : null;
+    }
+    // x2 + number
+    if(a.type==='x2' && b.type==='num') return {type:'num',val:b.val*2};
+    if(a.type==='num' && b.type==='x2') return {type:'num',val:a.val*2};
+    // x4 + number
+    if(a.type==='x4' && b.type==='num') return {type:'num',val:b.val*4};
+    if(a.type==='num' && b.type==='x4') return {type:'num',val:a.val*4};
+    return null;
+}
+
+function slideRow(row){
+    let tiles = row.filter(t=>t!==null);
+    let result = [];
+    let i = 0;
+    while(i < tiles.length){
+        if(i+1 < tiles.length && canMerge(tiles[i], tiles[i+1])){
+            const res = mergeResult(tiles[i], tiles[i+1]);
+            if(res && res.type==='num') scoreVal += res.val;
+            result.push(res);
+            i += 2;
+        } else {
+            result.push(tiles[i]);
+            i++;
+        }
+    }
+    while(result.length < 4) result.push(null);
+    return result;
+}
+
+function boardEqual(a, b){
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function copyBoard(b){
+    return b.map(r=>r.map(t=>t?{...t}:null));
+}
+
 function moveLeft(){
-    for(let r=0;r<4;r++) board[r]=slide(board[r]);
+    for(let r=0;r<4;r++) board[r] = slideRow(board[r]);
 }
 
 function moveRight(){
-    for(let r=0;r<4;r++) board[r]=slide(board[r].reverse()).reverse();
+    for(let r=0;r<4;r++) board[r] = slideRow([...board[r]].reverse()).reverse();
 }
 
 function moveUp(){
     for(let c=0;c<4;c++){
-        let col=[];
-        for(let r=0;r<4;r++) col.push(board[r][c]);
-        col=slide(col);
-        for(let r=0;r<4;r++) board[r][c]=col[r];
+        let col = board.map(r=>r[c]);
+        const row = slideRow(col);
+        for(let r=0;r<4;r++) board[r][c] = row[r];
     }
 }
 
 function moveDown(){
     for(let c=0;c<4;c++){
-        let col=[];
-        for(let r=0;r<4;r++) col.push(board[r][c]);
-        col=slide(col.reverse()).reverse();
-        for(let r=0;r<4;r++) board[r][c]=col[r];
+        let col = board.map(r=>r[c]).reverse();
+        const row = slideRow(col).reverse();
+        for(let r=0;r<4;r++) board[r][c] = row[r];
     }
 }
 
-// INPUT
-document.addEventListener("keydown", e=>{
+function canMove(){
+    for(let r=0;r<4;r++){
+        for(let c=0;c<4;c++){
+            if(!board[r][c]) return true;
+            if(c<3 && canMerge(board[r][c], board[r][c+1])) return true;
+            if(r<3 && canMerge(board[r][c], board[r+1][c])) return true;
+        }
+    }
+    return false;
+}
 
-    let before = JSON.stringify(board);
+function checkWin(){
+    for(let r=0;r<4;r++)
+        for(let c=0;c<4;c++)
+            if(board[r][c] && board[r][c].type==='num' && board[r][c].val===2048)
+                return true;
+    return false;
+}
+
+document.addEventListener('keydown', e=>{
+    const dirs = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if(!dirs.includes(e.key)) return;
+    e.preventDefault();
+    if(won) return;
+
+    const before = copyBoard(board);
     history.push(before);
 
-    if(e.key==="ArrowLeft") moveLeft();
-    if(e.key==="ArrowRight") moveRight();
-    if(e.key==="ArrowUp") moveUp();
-    if(e.key==="ArrowDown") moveDown();
+    if(e.key==='ArrowLeft')  moveLeft();
+    if(e.key==='ArrowRight') moveRight();
+    if(e.key==='ArrowUp')    moveUp();
+    if(e.key==='ArrowDown')  moveDown();
 
-    let after = JSON.stringify(board);
-
-    if(before!==after){
+    if(!boardEqual(before, board)){
         addTile();
         draw();
         popFX();
+        updateScore();
+        if(checkWin()){
+            won = true;
+            setTimeout(()=>alert('You win! 🎉 Score: '+scoreVal), 200);
+        } else if(!canMove()){
+            setTimeout(()=>alert('You lost! Score: '+scoreVal), 200);
+        }
+    } else {
+        history.pop();
     }
 });
 
-// FX
 function popFX(){
-    document.querySelectorAll(".tile").forEach(t=>{
-        if(t.textContent!==""){
-            t.classList.add("pop");
-            setTimeout(()=>t.classList.remove("pop"),150);
+    document.querySelectorAll('.tile').forEach(t=>{
+        if(t.textContent!==''){
+            t.classList.add('pop');
+            setTimeout(()=>t.classList.remove('pop'),150);
         }
     });
 }
 
-// UNDO
 function undo(){
-    if(history.length===0) return;
-    board = JSON.parse(history.pop());
+    if(!history.length) return;
+    won = false;
+    board = history.pop();
     draw();
+    updateScore();
 }
 
-// RESTART
 function restart(){
     history=[];
+    scoreVal=0;
+    won=false;
     init();
 }
 
 init();
-
 </script>
-
 </body>
 </html>

@@ -6,57 +6,132 @@
 <title>Rift Defence</title>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#0f0f1a;
-color:white;
-text-align:center;
-overflow:hidden;
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0b0b14;
+  color: white;
+  text-align: center;
+  overflow-x: hidden;
 }
 
-header{
-background:#1a1a2e;
-padding:10px;
-border-bottom:2px solid #6C5CE7;
+header {
+  background: #121224;
+  padding: 10px;
+  border-bottom: 2px solid #6C5CE7;
+  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.2);
 }
 
-#topBar{
-display:flex;
-justify-content:center;
-gap:10px;
-padding:10px;
-flex-wrap:wrap;
+header h1 {
+  margin: 5px 0;
+  font-size: 1.8rem;
+  letter-spacing: 1px;
 }
 
-button{
-background:#6C5CE7;
-border:none;
-padding:10px 14px;
-border-radius:8px;
-cursor:pointer;
-color:white;
-font-weight:bold;
+#dashboard {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 25px;
+  background: #16162e;
+  padding: 12px 20px;
+  margin: 15px auto;
+  max-width: 860px;
+  border-radius: 10px;
+  border: 1px solid #2e2e54;
 }
 
-canvas{
-background:#111122;
-display:block;
-margin:auto;
-border:2px solid #6C5CE7;
+.stat-box {
+  font-size: 1.05rem;
+  font-weight: 600;
+  background: #1f1f3d;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #3d3d75;
 }
 
-#shop{
-display:none;
-position:absolute;
-top:120px;
-left:50%;
-transform:translateX(-50%);
-background:#1a1a2e;
-padding:20px;
-border-radius:12px;
-border:2px solid #6C5CE7;
-width:300px;
+#topBar {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+button {
+  background: #6C5CE7;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: #5b4cc4;
+  transform: translateY(-1px);
+}
+
+.active-mode {
+  background: #00FF88 !important;
+  color: #0b0b14 !important;
+}
+
+canvas {
+  background: #07070f;
+  display: block;
+  margin: 0 auto 20px auto;
+  border: 2px solid #6C5CE7;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  cursor: crosshair;
+}
+
+.shop-menu {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #16162e;
+  padding: 25px;
+  border-radius: 16px;
+  border: 2px solid #6C5CE7;
+  width: 320px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.85);
+  z-index: 10;
+}
+
+.shop-menu h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #00d2ff;
+  font-size: 1.4rem;
+}
+
+.shop-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.shop-grid button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #232344;
+  border: 1px solid #42427a;
+}
+
+.shop-grid button:hover {
+  background: #2d2d59;
+}
+
+.close-btn {
+  background: #ff2e88 !important;
+  width: 100%;
 }
 </style>
 </head>
@@ -64,36 +139,46 @@ width:300px;
 <body>
 
 <header>
-<h1>🌀 Rift Defence</h1>
+  <h1>🌀 Rift Defence</h1>
 </header>
 
-<div id="topBar">
-<button onclick="restartGame()">🔄 Restart</button>
-<button onclick="toggleShop()">🛒 Upgrades</button>
-<button onclick="window.location.href='index.html'">Back</button>
+<div id="dashboard">
+  <div class="stat-box">💰 Coins: <span id="coins">0</span></div>
+  <div class="stat-box">🌊 Wave: <span id="wave">1</span></div>
+  <div class="stat-box">🔥 Damage: <span id="damage">1</span></div>
+  <div class="stat-box">📏 Range: <span id="range">5</span></div>
+  <div class="stat-box">❤️ Rift Core: <span id="base">0</span>/100</div>
 </div>
 
-<div>
-💰 <span id="coins">0</span> |
-🌊 <span id="wave">1</span> |
-🔥 <span id="damage">1</span> |
-📏 <span id="range">5</span> |
-❤️ <span id="base">0</span>/100
+<div id="topBar">
+  <button onclick="restartGame()">🔄 Restart</button>
+  <button onclick="toggleShop('upgradesShop')">🛒 Upgrades</button>
+  <button id="towerShopBtn" onclick="toggleShop('towersShop')">🛡️ Towers Shop</button>
+  <button onclick="window.location.href='index.html'">Back</button>
 </div>
 
 <canvas id="game" width="900" height="500"></canvas>
 
-<div id="shop">
-<h3>Upgrades</h3>
-<button onclick="upgradeDamage()">+ Damage (10)</button>
-<button onclick="upgradeFire()">+ Fire Rate (15)</button>
-<button onclick="upgradeRamp()">+ Beam (25)</button>
-<button onclick="upgradeRange()">+ Range (20)</button>
-<button onclick="toggleShop()">Close</button>
+<div id="upgradesShop" class="shop-menu">
+  <h3>Weapon Terminal</h3>
+  <div class="shop-grid">
+    <button onclick="upgradeDamage()"><span>+ Beam Damage</span> <strong id="cost-dmg">10 c</strong></button>
+    <button onclick="upgradeFire()"><span>+ Fire Rate</span> <strong id="cost-fire">15 c</strong></button>
+    <button onclick="upgradeRamp()"><span>+ Charge Multiplier</span> <strong id="cost-ramp">25 c</strong></button>
+    <button onclick="upgradeRange()"><span>+ Scanner Range</span> <strong id="cost-range">20 c</strong></button>
+  </div>
+  <button class="close-btn" onclick="toggleShop('upgradesShop')">Close Terminal</button>
+</div>
+
+<div id="towersShop" class="shop-menu">
+  <h3>Towers Terminal</h3>
+  <div class="shop-grid">
+    <button onclick="buyDefenseTower()"><span>Buy Defense Tower</span> <strong>40 c</strong></button>
+  </div>
+  <button class="close-btn" onclick="toggleShop('towersShop')">Close Terminal</button>
 </div>
 
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -103,10 +188,12 @@ let lastTime = 0;
 
 let coins, wave, base;
 let damage, fireRate, ramp, range;
+let costDmg = 10, costFire = 15, costRamp = 25, costRange = 20;
 
 let turretRow;
 let enemies = [];
 let particles = [];
+let towers = []; // Array to store placed towers
 
 let beamTimer = 0;
 let spawnTimer = 0;
@@ -114,283 +201,383 @@ let waveTimer = 0;
 
 let currentTarget = null;
 let beamCharge = 1;
+let placementMode = false; // Mode tracking tower placement
 
 const GRID = 20;
 
 // ================= RESET =================
 function resetState(){
-coins = 0;
-wave = 1;
-base = 0;
+  coins = 0;
+  wave = 1;
+  base = 0;
 
-damage = 1;
-fireRate = 700;
-ramp = 1;
-range = 5;
+  damage = 1.5; 
+  fireRate = 600;
+  ramp = 1;
+  range = 8; 
 
-turretRow = 10;
+  costDmg = 10; costFire = 15; costRamp = 25; costRange = 20;
 
-enemies = [];
-particles = [];
+  turretRow = 12;
 
-beamTimer = 0;
-spawnTimer = 0;
-waveTimer = 0;
+  enemies = [];
+  particles = [];
+  towers = [];
+  placementMode = false;
+  document.getElementById("towerShopBtn").classList.remove("active-mode");
 
-currentTarget = null;
-beamCharge = 1;
+  beamTimer = 0;
+  spawnTimer = 0;
+  waveTimer = 0;
 
-updateUI();
+  currentTarget = null;
+  beamCharge = 1;
+
+  updateUI();
 }
 
-// ================= AUTO START =================
 function startGame(){
-if(running) return;
-running = true;
-lastTime = performance.now();
-requestAnimationFrame(loop);
+  if(running) return;
+  running = true;
+  lastTime = performance.now();
+  requestAnimationFrame(loop);
 }
 
 window.onload = () => {
-resetState();
-startGame();
+  resetState();
+  startGame();
 };
 
 // ================= UI =================
 function updateUI(){
-document.getElementById("coins").textContent = coins;
-document.getElementById("wave").textContent = wave;
-document.getElementById("damage").textContent = damage;
-document.getElementById("range").textContent = range;
-document.getElementById("base").textContent = base;
+  document.getElementById("coins").textContent = coins;
+  document.getElementById("wave").textContent = wave;
+  document.getElementById("damage").textContent = damage.toFixed(1);
+  document.getElementById("range").textContent = range;
+  document.getElementById("base").textContent = base;
+
+  document.getElementById("cost-dmg").textContent = costDmg + " c";
+  document.getElementById("cost-fire").textContent = costFire + " c";
+  document.getElementById("cost-ramp").textContent = costRamp + " c";
+  document.getElementById("cost-range").textContent = costRange + " c";
 }
 
-// ================= CONTROLS =================
+// ================= CONTROLS & PLACEMENT =================
 document.addEventListener("keydown",(e)=>{
-if(e.key==="ArrowUp") turretRow--;
-if(e.key==="ArrowDown") turretRow++;
-
-turretRow=Math.max(0,Math.min(24,turretRow));
+  if(e.key==="ArrowUp") turretRow--;
+  if(e.key==="ArrowDown") turretRow++;
+  turretRow=Math.max(0,Math.min(24,turretRow));
 });
 
-// ================= RESTART =================
+canvas.addEventListener("click", (e) => {
+  if (!placementMode) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const gridX = Math.floor(mouseX / GRID) * GRID;
+  const gridY = Math.floor(mouseY / GRID) * GRID;
+  const row = Math.floor(mouseY / GRID);
+
+  // Prevent duplicate placement on exact same spot
+  const existing = towers.find(t => t.x === gridX && t.y === gridY);
+  if (!existing && gridX >= 60) { // Don't allow placing over the core lane
+    towers.push({
+      x: gridX,
+      y: gridY,
+      row: row,
+      beamTimer: 0,
+      currentTarget: null,
+      beamCharge: 1
+    });
+    
+    placementMode = false;
+    document.getElementById("towerShopBtn").classList.remove("active-mode");
+  }
+});
+
 function restartGame(){
-running = false;
-resetState();
-
-setTimeout(()=>{
-running = true;
-lastTime = performance.now();
-requestAnimationFrame(loop);
-},50);
+  running = false;
+  resetState();
+  setTimeout(()=>{
+    running = true;
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  },50);
 }
 
-// ================= SHOP =================
-function toggleShop(){
-let s=document.getElementById("shop");
-s.style.display=s.style.display==="block"?"none":"block";
+// ================= SHOP TERMINALS =================
+function toggleShop(menuId){
+  let s = document.getElementById(menuId);
+  const isOpen = s.style.display === "block";
+  
+  // Close all shops first
+  document.getElementById("upgradesShop").style.display = "none";
+  document.getElementById("towersShop").style.display = "none";
+  
+  s.style.display = isOpen ? "none" : "block";
 }
 
-function upgradeDamage(){ if(coins>=10){coins-=10;damage++;updateUI();}}
-function upgradeFire(){ if(coins>=15&&fireRate>150){coins-=15;fireRate-=60;updateUI();}}
-function upgradeRamp(){ if(coins>=25){coins-=25;ramp+=0.5;updateUI();}}
-function upgradeRange(){ if(coins>=20){coins-=20;range++;updateUI();}}
+function upgradeDamage(){ 
+  if(coins>=costDmg){
+    coins-=costDmg; damage += 0.8; costDmg = Math.floor(costDmg * 1.5); updateUI();
+  }
+}
+function upgradeFire(){ 
+  if(coins>=costFire && fireRate>100){
+    coins-=costFire; fireRate-=50; costFire = Math.floor(costFire * 1.6); updateUI();
+  }
+}
+function upgradeRamp(){ 
+  if(coins>=costRamp){
+    coins-=costRamp; ramp+=0.4; costRamp = Math.floor(costRamp * 1.5); updateUI();
+  }
+}
+function upgradeRange(){ 
+  if(coins>=costRange && range < 22){
+    coins-=costRange; range+=2; costRange = Math.floor(costRange * 1.4); updateUI();
+  }
+}
 
-// ================= ENEMY =================
+function buyDefenseTower() {
+  if (coins >= 40) {
+    coins -= 40;
+    placementMode = true;
+    document.getElementById("towerShopBtn").classList.add("active-mode");
+    toggleShop("towersShop");
+    updateUI();
+  }
+}
+
+// ================= ENEMY SYSTEM (HARDER SCALING) =================
 function spawnEnemy(){
-enemies.push({
-x:900,
-row:Math.floor(Math.random()*25),
-hp:5
-});
+  // HARDER: Base HP scales dynamically up by 4.5 points per wave instead of 2
+  let hpScaling = 3 + (wave * 4.5); 
+  enemies.push({
+    x: 900,
+    row: Math.floor(Math.random()*25),
+    hp: hpScaling,
+    maxHp: hpScaling
+  });
 }
 
-// ================= PARTICLES (SMALL + CLEAN) =================
+// ================= PARTICLES =================
 function spawnParticles(x,y){
-for(let i=0;i<6;i++){
-particles.push({
-x:x,
-y:y,
-vx:(Math.random()-0.5)*2,
-vy:(Math.random()-0.5)*2,
-life:20
-});
-}
+  for(let i=0;i<8;i++){
+    particles.push({
+      x:x,
+      y:y,
+      vx:(Math.random()-0.5)*4,
+      vy:(Math.random()-0.5)*4,
+      life:25
+    });
+  }
 }
 
 function drawParticles(){
-for(let i=particles.length-1;i>=0;i--){
-let p=particles[i];
-
-p.x += p.vx;
-p.y += p.vy;
-p.life--;
-
-ctx.fillStyle = "rgba(0,210,255,0.9)";
-ctx.fillRect(p.x,p.y,2,2);
-
-if(p.life<=0) particles.splice(i,1);
-}
+  for(let i=particles.length-1;i>=0;i--){
+    let p=particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    ctx.fillStyle = `rgba(0, 210, 255, ${p.life/25})`;
+    ctx.fillRect(p.x,p.y,3,3);
+    if(p.life<=0) particles.splice(i,1);
+  }
 }
 
 // ================= GRID =================
 function drawGrid(){
-ctx.strokeStyle="#1f1f3a";
-
-for(let x=0;x<900;x+=GRID){
-ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();
+  ctx.strokeStyle="#14142b";
+  for(let x=0;x<900;x+=GRID){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();
+  }
+  for(let y=0;y<500;y+=GRID){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(900,y);ctx.stroke();
+  }
 }
 
-for(let y=0;y<500;y+=GRID){
-ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(900,y);ctx.stroke();
-}
-}
-
-// ================= TURRET =================
+// ================= TURRETS & TOWERS DRAWING =================
 function drawTurret(){
-ctx.fillStyle="#6C5CE7";
-ctx.fillRect(30,turretRow*GRID,30,20);
+  ctx.fillStyle = "rgba(108, 92, 231, 0.15)";
+  ctx.fillRect(0, turretRow*GRID, 900, GRID);
+
+  ctx.fillStyle="#6C5CE7";
+  ctx.fillRect(20, turretRow*GRID, 25, 20);
+  ctx.fillStyle="#00d2ff";
+  ctx.fillRect(45, turretRow*GRID+6, 10, 8);
 }
 
-// ================= TARGET =================
-function getTarget(){
-let best=null;
-
-for(let e of enemies){
-if(e.row===turretRow){
-if(e.x<=60+range*40){
-if(!best||e.x<best.x){
-best=e;
-}
-}
-}
-}
-return best;
+function drawTowers() {
+  ctx.fillStyle = "#00FF88";
+  for (let t of towers) {
+    ctx.fillRect(t.x, t.y, 20, 20);
+    ctx.fillStyle = "#00b35f";
+    ctx.fillRect(t.x + 5, t.y + 5, 10, 10);
+    ctx.fillStyle = "#00FF88";
+  }
 }
 
-// ================= BEAM =================
-function fireBeam(delta){
-
-beamTimer+=delta;
-
-if(beamTimer<fireRate) return;
-
-beamTimer=0;
-
-let target=getTarget();
-
-if(!target){
-currentTarget=null;
-beamCharge=1;
-return;
+// ================= TARGET SEARCH UTILITIES =================
+function findTargetForUnit(startX, row) {
+  let best = null;
+  for (let e of enemies) {
+    if (e.row === row && e.x >= startX) {
+      if (e.x <= startX + (range * 40)) {
+        if (!best || e.x < best.x) {
+          best = e;
+        }
+      }
+    }
+  }
+  return best;
 }
 
-if(currentTarget===target){
-beamCharge+=0.3*ramp;
-}else{
-beamCharge=1;
-currentTarget=target;
+// ================= LASER BEAM ENGINES =================
+function fireMainBeam(delta){
+  beamTimer+=delta;
+  if(beamTimer<fireRate) return;
+
+  let target = findTargetForUnit(55, turretRow);
+  if(!target){
+    currentTarget=null;
+    beamCharge=1;
+    return;
+  }
+
+  beamTimer=0;
+  if(currentTarget===target){
+    beamCharge+=0.25*ramp;
+  }else{
+    beamCharge=1;
+    currentTarget=target;
+  }
+
+  executeDamage(target, damage * beamCharge, 55, turretRow*GRID+10);
 }
 
-let dmg=damage*beamCharge;
-target.hp-=dmg;
+function fireTowerBeams(delta) {
+  for (let t of towers) {
+    t.beamTimer += delta;
+    if (t.beamTimer < fireRate) continue;
 
-ctx.strokeStyle=`rgba(0,210,255,${Math.min(beamCharge/6,1)})`;
-ctx.lineWidth=Math.min(2+beamCharge,10);
+    let target = findTargetForUnit(t.x + 20, t.row);
+    if (!target) {
+      t.currentTarget = null;
+      t.beamCharge = 1;
+      continue;
+    }
 
-ctx.beginPath();
-ctx.moveTo(60,turretRow*GRID+10);
-ctx.lineTo(target.x+10,target.y+10);
-ctx.stroke();
+    t.beamTimer = 0;
+    if (t.currentTarget === target) {
+      t.beamCharge += 0.25 * ramp;
+    } else {
+      t.beamCharge = 1;
+      t.currentTarget = target;
+    }
 
-if(target.hp<=0){
-coins+=2;
-
-// ✨ SMALL PARTICLE BURST
-spawnParticles(target.x+10,target.y+10);
-
-let i=enemies.indexOf(target);
-if(i>-1) enemies.splice(i,1);
-
-beamCharge=1;
-currentTarget=null;
-updateUI();
-}
+    executeDamage(target, damage * t.beamCharge, t.x + 10, t.y + 10, true);
+  }
 }
 
-// ================= ENEMIES =================
+function executeDamage(target, calculatedDmg, startX, startY, isTower = false) {
+  target.hp -= calculatedDmg;
+
+  // Render Laser Visuals
+  ctx.strokeStyle = isTower ? "rgba(0, 255, 136, 0.7)" : "rgba(0, 210, 255, 0.7)";
+  ctx.shadowColor = isTower ? "#00FF88" : "#00d2ff";
+  ctx.shadowBlur = 8;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(target.x + 10, target.y + 10);
+  ctx.stroke();
+  ctx.shadowBlur = 0; 
+
+  if(target.hp <= 0){
+    coins += 3 + Math.floor(wave / 2);
+    spawnParticles(target.x + 10, target.y + 10);
+    let i = enemies.indexOf(target);
+    if(i > -1) enemies.splice(i, 1);
+    updateUI();
+  }
+}
+
+// ================= ENEMIES MANAGER =================
 function drawEnemies(delta){
+  for(let i=enemies.length-1;i>=0;i--){
+    let e=enemies[i];
+    // HARDER: Base velocity increase factor raised from 0.05 to 0.12 per wave level
+    e.x -= 1.1 + (wave * 0.12); 
+    e.y = e.row*GRID;
 
-for(let i=enemies.length-1;i>=0;i--){
-let e=enemies[i];
+    ctx.fillStyle="#FF2E88";
+    ctx.fillRect(e.x,e.y,20,20);
 
-e.x -= 1 + wave*0.08;
-e.y = e.row*GRID;
+    ctx.fillStyle="#222";
+    ctx.fillRect(e.x,e.y-6,20,4);
+    ctx.fillStyle="#00FF88";
+    let hpPercent = Math.max(0, e.hp / e.maxHp);
+    ctx.fillRect(e.x,e.y-6,20*hpPercent,4);
 
-ctx.fillStyle="#FF2E88";
-ctx.fillRect(e.x,e.y,20,20);
+    if(e.x<=0){
+      base+=10; 
+      enemies.splice(i,1);
+      updateUI();
 
-ctx.fillStyle="#333";
-ctx.fillRect(e.x,e.y-6,20,4);
-ctx.fillStyle="#00FF88";
-ctx.fillRect(e.x,e.y-6,20*(e.hp/5),4);
-
-if(e.x<=0){
-base+=2;
-enemies.splice(i,1);
-
-if(base>=100){
-alert("💀 GAME OVER");
-restartGame();
-running=false;
-return;
+      if(base>=100){
+        running=false;
+        setTimeout(() => {
+          alert("💀 GAME OVER\nYou survived until wave: " + wave);
+          restartGame();
+        }, 10);
+        return;
+      }
+    }
+  }
 }
-}
-}
-}
 
-// ================= LOOP =================
+// ================= MAIN LOOP =================
 function loop(t){
-if(!running) return;
+  if(!running) return;
 
-let delta=t-lastTime;
-lastTime=t;
+  let delta=t-lastTime;
+  lastTime=t;
 
-ctx.clearRect(0,0,900,500);
+  ctx.clearRect(0,0,900,500);
 
-drawGrid();
-drawTurret();
+  drawGrid();
+  drawTurret();
+  drawTowers();
 
-// spawn system
-spawnTimer += delta;
+  // HARDER Spawn Cycle: Enemies swarm faster down the lanes
+  spawnTimer += delta;
+  let dynamicRate = Math.max(350, 1300 - (wave * 95));
 
-let baseSpawnRate = 1300;
-let dynamicRate = Math.max(700, baseSpawnRate - (wave * 60));
+  if(spawnTimer > dynamicRate){
+    spawnEnemy();
+    spawnTimer = 0;
+  }
 
-if(spawnTimer > dynamicRate){
-spawnEnemy();
-if(wave > 6 && Math.random() < 0.25) spawnEnemy();
-spawnTimer = 0;
-}
+  waveTimer += delta;
+  if(waveTimer>12000){
+    wave++;
+    coins+=12;
+    waveTimer=0;
+    updateUI();
+  }
 
-waveTimer += delta;
-if(waveTimer>10000){
-wave++;
-coins+=10;
-waveTimer=0;
-updateUI();
-}
+  drawEnemies(delta);
+  fireMainBeam(delta);
+  fireTowerBeams(delta);
+  drawParticles();
 
-drawEnemies(delta);
-fireBeam(delta);
-drawParticles();
-updateUI();
-
-requestAnimationFrame(loop);
+  requestAnimationFrame(loop);
 }
 
 updateUI();
-
 </script>
 
 </body>

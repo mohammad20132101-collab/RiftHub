@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flappy Block</title>
-
 <style>
 body{
   margin:0;
@@ -12,21 +11,18 @@ body{
   background:#0f0f1a;
   color:white;
 }
-
 header{
   background:#1a1a2e;
   border-bottom:2px solid #4c6fff;
   text-align:center;
   padding:15px;
 }
-
 .wrapper{
   display:flex;
   flex-direction:column;
   align-items:center;
   padding:20px;
 }
-
 .panel{
   display:flex;
   gap:15px;
@@ -35,14 +31,12 @@ header{
   align-items:center;
   margin-bottom:10px;
 }
-
 .score{
   background:#1a1a2e;
   border:1px solid #4c6fff;
   padding:8px 12px;
   border-radius:8px;
 }
-
 button{
   background:#4c6fff;
   color:white;
@@ -51,11 +45,9 @@ button{
   border-radius:8px;
   cursor:pointer;
 }
-
 button:hover{
   opacity:0.85;
 }
-
 canvas{
   background:#050814;
   border:3px solid #4c6fff;
@@ -63,46 +55,36 @@ canvas{
 }
 </style>
 </head>
-
 <body>
-
 <header>
   <h1>Flappy Block</h1>
   <p>Flap through the rifts</p>
 </header>
-
 <div class="wrapper">
-
   <div class="panel">
     <div class="score">Score: <span id="score">0</span></div>
-
     <button onclick="startGame()">Restart</button>
     <button onclick="window.location.href='index.html'">Back</button>
-
     <label>
       Block Color:
-      <input type="color" id="colorPicker" value="#4c6fff">
+      <input type="color" id="colorPicker" value="#4c6fff"
+        onfocus="paused = true"
+        onblur="paused = false">
     </label>
   </div>
-
   <canvas id="game" width="500" height="500"></canvas>
-
 </div>
-
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
 let bird;
 let pipes;
 let score;
 let frame;
 let loop;
+let paused = false;
 
-// ================= START =================
 function startGame(){
-
   bird = {
     x:100,
     y:200,
@@ -110,33 +92,27 @@ function startGame(){
     h:30,
     vy:0
   };
-
   pipes = [];
   score = 0;
   frame = 0;
-
+  paused = false;
   document.getElementById("score").innerText = score;
-
   clearInterval(loop);
   loop = setInterval(update,20);
 }
 
-// ================= INPUT =================
 document.addEventListener("keydown",e=>{
   if(e.code==="Space"){
     bird.vy = -8;
   }
 });
-
 document.addEventListener("mousedown",()=>{
   bird.vy = -8;
 });
 
-// ================= PIPE =================
 function spawnPipe(){
   const gap = 140;
   const topHeight = Math.random()*220 + 50;
-
   pipes.push({
     x:canvas.width,
     top:topHeight,
@@ -145,43 +121,31 @@ function spawnPipe(){
   });
 }
 
-// ================= DRAW HELPERS =================
 function drawRect(x,y,w,h,color){
-  
-  // fill
   ctx.fillStyle = color;
   ctx.fillRect(x,y,w,h);
-
-  // OUTER BLACK OUTLINE (thicker = visible)
   ctx.strokeStyle = "black";
   ctx.lineWidth = 3;
   ctx.strokeRect(x,y,w,h);
-
-  // INNER DARK EDGE (gives “game feel” depth)
   ctx.strokeStyle = "rgba(0,0,0,0.4)";
   ctx.lineWidth = 1;
   ctx.strokeRect(x+1,y+1,w-2,h-2);
 }
 
-// ================= GAME LOOP =================
 function update(){
-
+  if(paused) return;
   frame++;
 
-  // clean redraw (NO blur trail)
   ctx.fillStyle="#050814";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // faint grid
   ctx.strokeStyle="rgba(255,255,255,0.05)";
-
   for(let x=0;x<=20;x++){
     ctx.beginPath();
     ctx.moveTo(x*25,0);
     ctx.lineTo(x*25,canvas.height);
     ctx.stroke();
   }
-
   for(let y=0;y<=20;y++){
     ctx.beginPath();
     ctx.moveTo(0,y*25);
@@ -189,10 +153,8 @@ function update(){
     ctx.stroke();
   }
 
-  // ================= BIRD =================
   bird.vy += 0.5;
   bird.y += bird.vy;
-
   drawRect(
     bird.x,
     bird.y,
@@ -201,28 +163,19 @@ function update(){
     document.getElementById("colorPicker").value
   );
 
-  // ================= PIPES =================
   if(frame % 90 === 0){
     spawnPipe();
   }
-
   for(let i=0;i<pipes.length;i++){
-
     let p = pipes[i];
     p.x -= 3;
-
-    // 🖤 rift tubes with black outline
     drawRect(p.x, 0, 50, p.top, "#4c6fff");
     drawRect(p.x, p.bottom, 50, canvas.height - p.bottom, "#4c6fff");
-
-    // score
     if(!p.scored && p.x+50 < bird.x){
       p.scored = true;
       score++;
       document.getElementById("score").innerText = score;
     }
-
-    // collision
     if(
       bird.x < p.x+50 &&
       bird.x+bird.w > p.x &&
@@ -234,16 +187,12 @@ function update(){
       gameOver();
     }
   }
-
   pipes = pipes.filter(p=>p.x>-60);
-
-  // bounds
   if(bird.y < 0 || bird.y+bird.h > canvas.height){
     gameOver();
   }
 }
 
-// ================= GAME OVER =================
 function gameOver(){
   clearInterval(loop);
   setTimeout(()=>{
@@ -252,8 +201,6 @@ function gameOver(){
 }
 
 startGame();
-
 </script>
-
 </body>
 </html>

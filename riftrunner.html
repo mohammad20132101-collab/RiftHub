@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rift Runner</title>
-
 <style>
 body{
   margin:0;
@@ -12,21 +11,18 @@ body{
   background:#0f0f1a;
   color:white;
 }
-
 header{
   background:#1a1a2e;
   padding:15px;
   text-align:center;
   border-bottom:2px solid #4c6fff;
 }
-
 .wrapper{
   display:flex;
   flex-direction:column;
   align-items:center;
   padding:20px;
 }
-
 .panel{
   display:flex;
   gap:15px;
@@ -35,13 +31,11 @@ header{
   flex-wrap:wrap;
   justify-content:center;
 }
-
 canvas{
   background:#050814;
   border:3px solid #4c6fff;
   border-radius:12px;
 }
-
 button{
   background:#4c6fff;
   border:none;
@@ -50,11 +44,7 @@ button{
   border-radius:8px;
   cursor:pointer;
 }
-
-button:hover{
-  opacity:0.85;
-}
-
+button:hover{ opacity:0.85; }
 .score{
   background:#1a1a2e;
   padding:8px 12px;
@@ -63,84 +53,92 @@ button:hover{
 }
 </style>
 </head>
-
 <body>
-
 <header>
   <h1>🏃 Rift Runner</h1>
-  <p>Dodge obstacles • Survive • Get score</p>
+  <p>Space / ↑ to jump   Double jump to clear tall obstacles!</p>
 </header>
-
 <div class="wrapper">
-
   <div class="panel">
     <div class="score">Score: <span id="score">0</span></div>
-
     <button onclick="startGame()">Restart</button>
     <button onclick="window.location.href='index.html'">Back</button>
-
     <label>
       Cube Color:
-      <input type="color" id="colorPicker" value="#4c6fff">
+      <input type="color" id="colorPicker" value="#4c6fff"
+        onfocus="paused = true"
+        onblur="paused = false">
     </label>
   </div>
-
   <canvas id="game" width="500" height="300"></canvas>
-
 </div>
-
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
 const groundHeight = 30;
 const groundY = canvas.height - groundHeight - 30;
+const NORMAL_H = 30;
 
-let player, obstacles, score, speed, frame, loop;
+let player, obstacles, score, speed, frame, loop, paused = false;
+let trail = [];
 
-function startGame(){
-
-  player = {
-    x: 60,
-    y: groundY,
-    w: 30,
-    h: 30,
-    vy: 0,
-    jumping:false
-  };
-
-  obstacles = [];
-  score = 0;
-  speed = 4;
-  frame = 0;
-
-  document.getElementById("score").innerText = score;
-
-  clearInterval(loop);
-  loop = setInterval(update, 20);
-}
-
-document.addEventListener("keydown", e=>{
-  if(e.code === "Space"){
-    if(!player.jumping){
+document.addEventListener("keydown", e => {
+  if(e.code === "Space" || e.code === "ArrowUp") {
+    if(player.jumpsLeft > 0) {
+      // Increased jump power slightly from -10 to -12 for a higher normal jump
       player.vy = -12;
       player.jumping = true;
+      player.jumpsLeft--;
     }
   }
 });
 
+function startGame(){
+  player = {
+    x: 60,
+    y: groundY,
+    w: NORMAL_H,
+    h: NORMAL_H,
+    vy: 0,
+    jumping: false,
+    jumpsLeft: 2
+  };
+  obstacles = [];
+  trail = [];
+  score = 0;
+  speed = 4;
+  frame = 0;
+  paused = false;
+  document.getElementById("score").innerText = score;
+  clearInterval(loop);
+  loop = setInterval(update, 20);
+}
+
 function spawn(){
-  obstacles.push({
-    x: canvas.width,
-    y: canvas.height - groundHeight - 50,
-    w: 20,
-    h: 50
-  });
+  const type = Math.random();
+  if(type < 0.7){
+    // short obstacle — 70% chance, clearable with single jump
+    obstacles.push({
+      x: canvas.width,
+      y: canvas.height - groundHeight - 40,
+      w: 20,
+      h: 40,
+      tall: false
+    });
+  } else {
+    // tall obstacle — 30% chance, strictly requires double jump
+    obstacles.push({
+      x: canvas.width,
+      y: canvas.height - groundHeight - 110,
+      w: 20,
+      h: 110,
+      tall: true
+    });
+  }
 }
 
 function update(){
-
+  if(paused) return;
   frame++;
 
   // background
@@ -155,7 +153,6 @@ function update(){
     ctx.lineTo(x*25,canvas.height);
     ctx.stroke();
   }
-
   for(let y=0;y<=12;y++){
     ctx.beginPath();
     ctx.moveTo(0,y*25);
@@ -163,40 +160,64 @@ function update(){
     ctx.stroke();
   }
 
-  // ground (ONLY SOURCE OF TRUTH)
+  // ground
   ctx.fillStyle="#1a1a2e";
   ctx.fillRect(0,canvas.height - groundHeight,canvas.width,groundHeight);
+  // ground glow line
+  ctx.strokeStyle="rgba(76,111,255,0.5)";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height - groundHeight);
+  ctx.lineTo(canvas.width, canvas.height - groundHeight);
+  ctx.stroke();
+  ctx.lineWidth=1;
 
   // physics
   player.vy += 0.6;
   player.y += player.vy;
-
   const floor = canvas.height - groundHeight - player.h;
-
   if(player.y >= floor){
     player.y = floor;
     player.vy = 0;
     player.jumping = false;
+    player.jumpsLeft = 2;
   }
 
-  // player color
   const color = document.getElementById("colorPicker").value;
 
-  ctx.fillStyle = color;
-  ctx.fillRect(player.x,player.y,player.w,player.h);
+  // trail
+  trail.push({x: player.x, y: player.y, w: player.w, h: player.h});
+  if(trail.length > 8) trail.shift();
 
-  // spawn obstacles
-  if(frame % 80 === 0){
-    spawn();
+  for(let i=0; i<trail.length; i++){
+    const alpha = (i / trail.length) * 0.35;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.fillRect(trail[i].x, trail[i].y, trail[i].w, trail[i].h);
   }
+  ctx.globalAlpha = 1;
+
+  // player
+  ctx.fillStyle = color;
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+
+  // spawn
+  if(frame % 80 === 0) spawn();
 
   // obstacles
-  for(let i=0;i<obstacles.length;i++){
+  for(let i=0; i<obstacles.length; i++){
     let o = obstacles[i];
     o.x -= speed;
 
-    ctx.fillStyle="#ff2e63";
-    ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle = o.tall ? "#ff2e63" : "#c0392b";
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+
+    if(o.tall){
+      ctx.strokeStyle="rgba(255,46,99,0.4)";
+      ctx.lineWidth=3;
+      ctx.strokeRect(o.x, o.y, o.w, o.h);
+      ctx.lineWidth=1;
+    }
 
     // collision
     if(
@@ -204,27 +225,23 @@ function update(){
       player.x + player.w > o.x &&
       player.y < o.y + o.h &&
       player.y + player.h > o.y
-    ){
+    ) {
       clearInterval(loop);
-      alert("Game Over! Score: " + score);
+      setTimeout(()=>alert("Game Over! Score: " + score), 100);
+      return;
     }
   }
-
   obstacles = obstacles.filter(o => o.x > -50);
 
   // score
   score++;
   document.getElementById("score").innerText = score;
 
-  // difficulty scaling
-  if(score % 200 === 0){
-    speed += 0.5;
-  }
+  // difficulty
+  if(score % 200 === 0) speed += 0.5;
 }
 
 startGame();
-
 </script>
-
 </body>
 </html>

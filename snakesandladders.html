@@ -292,6 +292,7 @@ input[type="color"] {
 <h1>🌀 Rift Snakes & Ladders</h1>
 
 <div class="btn-row">
+  <button onclick="goBack()">🏠 Back</button>
   <button onclick="initGame()">Reset</button>
   <button onclick="showMenu()">Menu</button>
 </div>
@@ -327,8 +328,8 @@ input[type="color"] {
 </div>
 
 <script>
-const LADDERS = { 3: 21, 8: 30, 28: 84, 58: 77, 75: 86, 80: 100 };
-const SNAKES = { 17: 4, 52: 29, 62: 22, 92: 51, 95: 72, 98: 79 };
+let LADDERS = {};
+let SNAKES = {};
 
 let p1Pos = 1;
 let p2Pos = 1;
@@ -339,6 +340,10 @@ let isRolling = false;
 
 function showMenu() {
     document.getElementById("menu").style.display = "flex";
+}
+
+function goBack() {
+    window.location.href = "index.html";
 }
 
 function startGame(selectedMode) {
@@ -355,6 +360,49 @@ function startGame(selectedMode) {
     initGame();
 }
 
+// Generate an algorithmic, safe randomized matrix of map hazards
+function randomizeMapLayout() {
+    LADDERS = {};
+    SNAKES = {};
+    const occupiedTiles = new Set([1, 100]); // Never spawn directly on start or finish
+
+    // Generate 6 random rifts (Ladders)
+    while (Object.keys(LADDERS).length < 6) {
+        let start = Math.floor(Math.random() * 85) + 2; // Range: 2 to 86
+        let rowStart = Math.floor((start - 1) / 10);
+        
+        if (!occupiedTiles.has(start)) {
+            // Target must always land higher up on the board than the start tile
+            let minTarget = (rowStart + 1) * 10 + 1;
+            if (minTarget < 99) {
+                let end = Math.floor(Math.random() * (99 - minTarget + 1)) + minTarget;
+                if (!occupiedTiles.has(end)) {
+                    LADDERS[start] = end;
+                    occupiedTiles.add(start);
+                    occupiedTiles.add(end);
+                }
+            }
+        }
+    }
+
+    // Generate 6 random void holes (Snakes)
+    while (Object.keys(SNAKES).length < 6) {
+        let start = Math.floor(Math.random() * 85) + 15; // Range: 15 to 99
+        let rowStart = Math.floor((start - 1) / 10);
+        
+        if (!occupiedTiles.has(start) && rowStart > 0) {
+            // Target must drop down at least 1 full row row baseline lower
+            let maxTarget = rowStart * 10;
+            let end = Math.floor(Math.random() * (maxTarget - 2 + 1)) + 2;
+            if (!occupiedTiles.has(end)) {
+                SNAKES[start] = end;
+                occupiedTiles.add(start);
+                occupiedTiles.add(end);
+            }
+        }
+    }
+}
+
 function initGame() {
     p1Pos = 1;
     p2Pos = 1;
@@ -363,6 +411,7 @@ function initGame() {
     isRolling = false;
     setDiceFace(1);
     
+    randomizeMapLayout();
     updateThemeColors();
     buildBoardUI();
     updateDashboard();
@@ -449,41 +498,32 @@ function rollDice() {
     processDiceRoll();
 }
 
-// ORGANIC DICE PHYSICS ENGINE
 function processDiceRoll() {
     isRolling = true;
     document.getElementById('diceBtn').disabled = true;
     
     const diceEl = document.getElementById('htmlDice');
-    let currentInterval = 40; // Starts fast and chaotic
+    let currentInterval = 40; 
     let framesCount = 0;
-    const maxFrames = 18;     // Total updates to simulate weight/friction
+    const maxFrames = 18;     
     
     function performRollLoop() {
         framesCount++;
-        
-        // Pick random temporary face
         setDiceFace(Math.floor(Math.random() * 6) + 1);
         
-        // Add physical micro-shakes (translate) and twists (rotate)
         const randX = (Math.random() * 16 - 8);
         const randY = (Math.random() * 16 - 8);
         const randRot = (Math.random() * 30 - 15);
-        
-        // Add a blur effect if rolling quickly
         const blurAmt = currentInterval < 120 ? (160 / currentInterval) : 0;
         
         diceEl.style.transform = `translate(${randX}px, ${randY}px) rotate(${randRot}deg)`;
         diceEl.style.filter = `blur(${blurAmt}px)`;
         
         if (framesCount < maxFrames) {
-            // Exponential deceleration decay curve 
             if (framesCount > 6) currentInterval += 25;
             if (framesCount > 12) currentInterval += 55;
-            
             setTimeout(performRollLoop, currentInterval);
         } else {
-            // Physics settle: clear transforms/blur, select final result
             diceEl.style.transform = 'none';
             diceEl.style.filter = 'none';
             
@@ -492,7 +532,7 @@ function processDiceRoll() {
             
             setTimeout(() => {
                 animateActiveMovement(absoluteRollResult);
-            }, 450); // Dramatic wait once dice rests
+            }, 450); 
         }
     }
     performRollLoop();

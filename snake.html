@@ -6,9 +6,11 @@
 <title>Snake</title>
 
 <style>
+@import url("https://fonts.googleapis.com/css?family=Lato:400,700");
+
 body{
   margin:0;
-  font-family:Arial;
+  font-family: 'Lato', Arial, sans-serif;
   background:#0f0f1a;
   color:white;
   display:flex;
@@ -25,9 +27,10 @@ header{
 
 canvas{
   background:#050814;
-  border:3px solid #ff2e63;
+  border:3px solid #4c6fff; 
   border-radius:12px;
   margin-top:15px;
+  box-shadow: 0 0 20px rgba(76, 108, 255, 0.2);
 }
 
 .score{
@@ -35,14 +38,31 @@ canvas{
   margin:10px;
 }
 
-button{
-  margin:5px;
-  padding:10px 15px;
-  border:none;
-  background:#ff2e63;
-  color:white;
-  border-radius:8px;
-  cursor:pointer;
+/* BUTTONS MATCHED TO SNAKES & LADDERS UTILITIES */
+button {
+    background: linear-gradient(135deg, #141428, #222244);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    transition: 0.2s;
+    margin: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+button:hover {
+    transform: scale(1.05);
+    border-color: white;
+}
+
+.btn-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px 0;
 }
 </style>
 </head>
@@ -57,9 +77,9 @@ button{
 
 <canvas id="game" width="400" height="400"></canvas>
 
-<div>
+<div class="btn-row">
+  <button onclick="window.location.href='index.html'">🏠 Back</button>
   <button onclick="startGame()">Restart</button>
-  <button onclick="window.location.href='index.html'">Back</button>
 </div>
 
 <script>
@@ -100,7 +120,7 @@ function randomFood(){
   };
 }
 
-// ✅ GRID-BASED INPUT (no pixel drift)
+// GRID-BASED INPUT
 document.addEventListener("keydown", e=>{
 
   if(e.key==="ArrowUp" && dy===0){
@@ -151,7 +171,7 @@ function update(){
     document.getElementById("score").textContent = score;
     food = randomFood();
 
-    // 📈 difficulty scaling
+    // difficulty scaling
     speed = Math.max(60, 150 - score*4);
     clearInterval(game);
     game = setInterval(update, speed);
@@ -168,7 +188,7 @@ function draw(){
   ctx.fillStyle="#050814";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // 🟦 GRID (same style as Tetris)
+  // GRID
   ctx.strokeStyle="rgba(255,255,255,0.06)";
 
   for(let x=0;x<=COLS;x++){
@@ -185,13 +205,13 @@ function draw(){
     ctx.stroke();
   }
 
-  // food
-  ctx.fillStyle="#ff2e63";
+  // food (Blue Portal theme)
+  ctx.fillStyle="#4c6fff";
   ctx.fillRect(food.x*SIZE, food.y*SIZE, SIZE, SIZE);
 
-  // snake
+  // snake (Swapped green elements with Rift Purple variations)
   for(let i=0;i<snake.length;i++){
-    ctx.fillStyle = i===0 ? "#00ff88" : "#00cc66";
+    ctx.fillStyle = i===0 ? "#9b5cff" : "#7936dd";
     ctx.fillRect(snake[i].x*SIZE, snake[i].y*SIZE, SIZE, SIZE);
   }
 }

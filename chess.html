@@ -504,10 +504,16 @@ function executeMove(fromR, fromC, toR, toC) {
     board[toR][toC] = movingPiece;
     board[fromR][fromC] = '';
     
-    if (targetPiece.toLowerCase() === 'k') {
+  if (targetPiece.toLowerCase() === 'k') {
         gameOver = true;
         buildBoardUI();
-        const winnerName = turn === 'W' ? document.getElementById('p1Name').textContent : document.getElementById('p2Name').textContent;
+        
+        // Explicitly check which side just made the capture using the movingPiece casing
+        const isWhiteWinner = (movingPiece === movingPiece.toUpperCase());
+        const winnerName = isWhiteWinner 
+            ? document.getElementById('p1Name').textContent.trim() 
+            : document.getElementById('p2Name').textContent.trim();
+            
         document.getElementById('status').innerHTML = `<span class="win-text">${winnerName} Wins! 🏆</span>`;
         return;
     }

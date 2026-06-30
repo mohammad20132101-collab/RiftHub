@@ -371,37 +371,58 @@ function checkValidMove(target) {
 }
 
 function createLink(target) {
-	
-var newLink = new Link(origin, target);
-newLink.owner = turn;
-linksArray.push(newLink);
-lastLink = newLink;
+    var newLink = new Link(origin, target);
+    newLink.owner = turn;
+    linksArray.push(newLink);
+    lastLink = newLink;
 	
     let squareCount = squaresArray.length;
     checkForSquare(newLink);
     origin = null;
 
     if (squareCount === squaresArray.length) {
-
         // No box made → switch turns
-       turn = turn === 'p1' ? 'p2' : 'p1';
-document.querySelector('#turn').classList.toggle('p2-turn');
-document.body.style.background = colours[turn];
+        turn = turn === 'p1' ? 'p2' : 'p1';
+        document.querySelector('#turn').classList.toggle('p2-turn');
+        document.body.style.background = colours[turn];
 
         // AI's turn?
         if (mode === 1 && turn === "p2") {
             setTimeout(aiMove, 600);
         }
-
     } else {
-
-        // Box made → same player goes again
-        if (mode === 1 && turn === "p2") {
-            setTimeout(aiMove, 600);
+        // Box made → check if that was the last box before continuing
+        if (!checkGameOver()) {
+            // Game isn't over yet → same player goes again
+            if (mode === 1 && turn === "p2") {
+                setTimeout(aiMove, 600);
+            }
         }
-
     }
+}
 
+// END GAME HANDLING
+function checkGameOver() {
+    let totalBoxesPossible = (dotCount - 1) * (dotCount - 1);
+    
+    if (squaresArray.length === totalBoxesPossible) {
+        let p1Name = document.getElementById('p1Name').textContent;
+        let p2Name = document.getElementById('p2Name').textContent;
+        
+        // Slight delay so the player can actually see the final box fill up
+        setTimeout(() => {
+            if (scores.p1 > scores.p2) {
+                alert(`🎉 Game Over! ${p1Name} wins with ${scores.p1} boxes!`);
+            } else if (scores.p2 > scores.p1) {
+                alert(`🎉 Game Over! ${p2Name} wins with ${scores.p2} boxes!`);
+            } else {
+                alert(`🤝 It's a Draw! Both players ended with ${scores.p1} boxes.`);
+            }
+        }, 300);
+        
+        return true; 
+    }
+    return false;
 }
 
 // SQUARE HANDLING
@@ -623,138 +644,138 @@ function startGame(m){
   init();
   document.body.style.background = colours.p1;
 }
-function aiMove(){
-
+function aiMove() {
   let moves = [];
 
-  for(let y = 0; y < dotCount; y++){
-    for(let x = 0; x < dotCount; x++){
+  // 1. Loop through every single potential link on the grid
+  for (let y = 0; y < dotCount; y++) {
+    for (let x = 0; x < dotCount; x++) {
+      let startDot = dotArray.find(d => d.gx === x && d.gy === y);
+      if (!startDot) continue;
 
-      let dot = dotArray.find(d => d.gx === x && d.gy === y);
-      if(!dot) continue;
+      // Only check Right and Down movements to prevent duplicating link evaluations
+      let directions = [{ dx: 1, dy: 0 }, { dx: 0, dy: 1 }];
 
-      let dirs = [
-        {dx:1,dy:0},
-        {dx:-1,dy:0},
-        {dx:0,dy:1},
-        {dx:0,dy:-1}
-      ];
-
-      for(let d of dirs){
+      for (let d of directions) {
         let nx = x + d.dx;
         let ny = y + d.dy;
 
-        let target = dotArray.find(p => p.gx === nx && p.gy === ny);
-        if(!target) continue;
+        let endDot = dotArray.find(p => p.gx === nx && p.gy === ny);
+        if (!endDot) continue;
 
-        origin = dot;
+        origin = startDot;
 
-        if(checkValidMove(target)){
-
+        // Verify the line hasn't been drawn yet and is valid
+        if (checkValidMove(endDot)) {
           let score = 0;
 
-          // =========================
-          // 🟩 1. CENTER CONTROL
-          // =========================
-          let center = dotCount / 2;
-          score += (dotCount - (Math.abs(nx - center) + Math.abs(ny - center)));
+          // Look at the two potential boxes sharing this specific link line
+          let boxStats = getBoxesAffected(startDot, endDot);
+          
+          let boxesCompleted = 0;
+          let createsThirdLine = false;
 
-          // =========================
-          // 🟨 2. SAFE POSITIONING (avoid bad setups)
-          // =========================
-          let danger = countAlmost3Line(nx, ny);
-          score -= danger * 50; // BIG penalty
-
-          // =========================
-          // 🟥 3. SQUARE COMPLETION (VERY IMPORTANT)
-          // =========================
-          let squareGain = countSquareGain(nx, ny);
-          score += squareGain * 100; // HUGE reward
-
-          // =========================
-          // 🟦 4. EXTRA OPTIONS
-          // =========================
-          let openSides = 0;
-          for(let nd of dirs){
-            let nnx = nx + nd.dx;
-            let nny = ny + nd.dy;
-            if(dotArray.find(p => p.gx === nnx && p.gy === nny)){
-              openSides++;
+          for (let linesCount of boxStats) {
+            if (linesCount === 3) {
+              boxesCompleted++; 
+            } else if (linesCount === 2) {
+              createsThirdLine = true; // Giving a 3rd line means opponent captures next turn
             }
           }
-          score += openSides * 3;
 
-          // small randomness
-          score += Math.random() * 2;
+          // ==========================================
+          // 🔥 STRATEGY WEIGHTS (The Brain Logic)
+          // ==========================================
+          if (boxesCompleted > 0) {
+            // Priority 1: Capture box! Huge bonus if it completes a double box setup (2000)
+            score += boxesCompleted * 1000; 
+          } else if (createsThirdLine) {
+            // Priority 3: Severe penalty for setting up a free box for the opponent
+            score -= 500; 
+          } else {
+            // Priority 2: Safe opening move. Prefer central territories early on
+            let center = dotCount / 2;
+            let distanceToCenter = Math.abs(x - center) + Math.abs(y - center);
+            score += (dotCount - distanceToCenter) * 2;
+          }
 
-          moves.push({from: dot, to: target, score});
+          // Add a tiny random fraction so the AI remains unpredictable across matching scores
+          score += Math.random() * 5;
+
+          moves.push({ from: startDot, to: endDot, score: score });
         }
-
         origin = null;
       }
     }
   }
 
-  if(moves.length === 0) return;
+  if (moves.length === 0) return;
 
-  moves.sort((a,b) => b.score - a.score);
+  // Execute highest scoring move
+  moves.sort((a, b) => b.score - a.score);
   let choice = moves[0];
 
   origin = choice.from;
   createLink(choice.to);
 }
-function countAlmost3Line(x, y){
-  let count = 0;
 
-  let dirs = [
-    {dx:1,dy:0},
-    {dx:0,dy:1}
-  ];
+/**
+ * Counts how many existing boundary lines are inside the boxes adjacent to a target link line
+ */
+function getBoxesAffected(p1, p2) {
+  let boxLineCounts = [];
 
-  for(let d of dirs){
-    let line = 1;
+  // Helper to check if a specific structural line exists in our master link array
+  let hasLine = (gx1, gy1, gx2, gy2) => {
+    return linksArray.some(l => 
+      (l.start.gx === gx1 && l.start.gy === gy1 && l.end.gx === gx2 && l.end.gy === gy2) ||
+      (l.start.gx === gx2 && l.start.gy === gy2 && l.end.gx === gx1 && l.end.gy === gy1)
+    );
+  };
 
-    // check both directions
-    for(let i of [-1,1]){
-      let nx = x + d.dx * i;
-      let ny = y + d.dy * i;
+  if (p1.gy === p2.gy) { // Evaluating Horizontal Link Line
+    let leftX = Math.min(p1.gx, p2.gx);
+    let y = p1.gy;
 
-      if(dotArray.find(p => p.gx === nx && p.gy === ny)){
-        line++;
-      }
+    // Check box above link line
+    if (y > 0) {
+      let lines = 0;
+      if (hasLine(leftX, y, leftX, y - 1)) lines++;       // Left post
+      if (hasLine(leftX + 1, y, leftX + 1, y - 1)) lines++; // Right post
+      if (hasLine(leftX, y - 1, leftX + 1, y - 1)) lines++; // Top line
+      boxLineCounts.push(lines);
     }
+    // Check box below link line
+    if (y < dotCount - 1) {
+      let lines = 0;
+      if (hasLine(leftX, y, leftX, y + 1)) lines++;       // Left post
+      if (hasLine(leftX + 1, y, leftX + 1, y + 1)) lines++; // Right post
+      if (hasLine(leftX, y + 1, leftX + 1, y + 1)) lines++; // Bottom line
+      boxLineCounts.push(lines);
+    }
+  } else { // Evaluating Vertical Link Line
+    let topY = Math.min(p1.gy, p2.gy);
+    let x = p1.gx;
 
-    // if it creates a "3 structure", it's dangerous
-    if(line === 3) count++;
+    // Check box to the left of link line
+    if (x > 0) {
+      let lines = 0;
+      if (hasLine(x, topY, x - 1, topY)) lines++;       // Top line
+      if (hasLine(x, topY + 1, x - 1, topY + 1)) lines++; // Bottom line
+      if (hasLine(x - 1, topY, x - 1, topY + 1)) lines++; // Far left line
+      boxLineCounts.push(lines);
+    }
+    // Check box to the right of link line
+    if (x < dotCount - 1) {
+      let lines = 0;
+      if (hasLine(x, topY, x + 1, topY)) lines++;       // Top line
+      if (hasLine(x, topY + 1, x + 1, topY + 1)) lines++; // Bottom line
+      if (hasLine(x + 1, topY, x + 1, topY + 1)) lines++; // Far right line
+      boxLineCounts.push(lines);
+    }
   }
 
-  return count;
-}
-function countSquareGain(x, y){
-  let gain = 0;
-
-  let size = 1;
-
-  // check all possible square directions
-  let patterns = [
-    [{dx:1,dy:0},{dx:0,dy:1},{dx:1,dy:1}],
-    [{dx:-1,dy:0},{dx:0,dy:1},{dx:-1,dy:1}],
-    [{dx:1,dy:0},{dx:0,dy:-1},{dx:1,dy:-1}],
-    [{dx:-1,dy:0},{dx:0,dy:-1},{dx:-1,dy:-1}]
-  ];
-
-  for(let p of patterns){
-
-    let a = dotArray.find(d => d.gx === x + p[0].dx && d.gy === y + p[0].dy);
-    let b = dotArray.find(d => d.gx === x + p[1].dx && d.gy === y + p[1].dy);
-    let c = dotArray.find(d => d.gx === x + p[2].dx && d.gy === y + p[2].dy);
-
-    if(a && b && c){
-      gain++;
-    }
-  }
-
-  return gain;
+  return boxLineCounts;
 }
 </script>
 
